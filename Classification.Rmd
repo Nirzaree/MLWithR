@@ -5,33 +5,68 @@ date: "09/07/2020"
 output: html_document
 ---
 
-```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+recap
+load data
+plot
+split into train test
+apply different models
+linear classifier
+LDA
+decision trees (rpart)
+knn
+svmradial
+random forest
+plot results 
+predict on best model 
+
+functions used: 
+1. plotting: featurePlot
+2. split train test: createDataPartition
+3. fitting models: train 
+4. viewing 
+3. predicting: predict
+
+config in train: 
+train(trainingdata, traininglabels,method, metric, control)
+method = "vglmAdjCat":linear classifier, "rpart" : decision trees,"knn","lda","svmRadial","rf"
+metric = "accuracy"
+control = trainControl(method = "cv", number = 10)
+
+Q: 
+Classification models : 
+Why are they useful here? 
+
+What do we check to make sure its not misleading? 
+How do we choose the validation metric here? 
+
+
+
+```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
 library(caret)
 ```
 
-```{r loadDataSet,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r loadDataSet,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 #iris is already loaded
 data(iris)
 ```
 
-```{r basicSummary,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r basicSummary,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 summary(iris)
 ```
 
-```{r basicPlots,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r basicPlots,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 featurePlot(iris[,1:4],iris[,5],"pairs")
 
 featurePlot(iris[,1:4],iris[,5],"box")
 
-featurePlot(iris[,1:4],iris[,5],"ellipse")
+# featurePlot(iris[,1:4],iris[,5],"ellipse")
 
 featurePlot(iris[,1:4],iris[,5],"density")
 ```
-**Observation**: Petal Width & Length are good features. Sepal Width & Sepal Length are not as good when trying to classify between the green and pink classes. 
+**Observation**: Petal Width & Length are good features. Sepal length okayish and sepal width very good. 
 
-
-```{r Classifiermodel_splitData,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r Classifiermodel_splitData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 
 #split data into test train 
 trainingIndex <- createDataPartition(iris[,5],p = 0.8,list = FALSE)
@@ -41,7 +76,7 @@ dtTest <- iris[-trainingIndex,]
 
 ```
 
-```{r Classifiermodel_config,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r Classifiermodel_config,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 control <- trainControl(method = "cv",number = 10)
 metric <- "accuracy"
 ```
@@ -54,7 +89,7 @@ Models to be tried out:
 5. SVM
 6. RF
 
-```{r Classifiermodel_tryModels,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r Classifiermodel_tryModels,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 #1. Linear Model
 set.seed(3)
 fit.linClassifier <- train(dtTrain[,1:4],
@@ -99,7 +134,7 @@ fit.rf <- train(dtTrain[,1:4],
                  trControl = control)
 ```
 
-```{r CheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r CheckModelAccuracy,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 ClassificationResults <- resamples(list(LinClassifier = fit.linClassifier,
                                         LDA = fit.lda,
                                         CART = fit.cart,
@@ -111,15 +146,16 @@ summary(ClassificationResults)
 dotplot(ClassificationResults)
 ```
 
-```{r InvestigateTheWinningModel,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r InvestigateTheWinningModel,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 print(fit.lda)
 
 ```
 
-```{r predictOnValidationSet,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r predictOnValidationSet,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 dtTest <- data.table(dtTest)
 dtTest[,predictedClass := predict(fit.lda,newdata =  dtTest)]
 
 confusionMatrix(dtTest[,predictedClass],dtTest[,Species])
 ```
 
+**Summary:**

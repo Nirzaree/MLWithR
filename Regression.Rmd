@@ -1,0 +1,114 @@
+---
+title: "Regression"
+author: "Nirzaree"
+date: "31/08/2020"
+output: html_document
+---
+
+R: 
+1. When <- vs when = 
+
+### Iteration1: Employed Against all other variables. Blindly. 
+
+```{r setup, include=FALSE}
+library(data.table)
+library(ggplot2)
+```
+
+```{r loadData}
+dtData <- data.table(longley)
+head(dtData)
+```
+
+```{r Model}
+lModel <- lm( "Employed~.",data = dtData)
+summary(lModel)
+```
+
+```{r Plot}
+ggplot() + geom_point(aes(x = dtData[,Employed], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
+```
+
+**Observation:** Low error on prediction but important features identified by it are Year,Number of people in the armed forces and number of people unemployed, of which atleast year and unemployed don't make sense. Hence removing them to see how effective the model is now
+
+#Itn2: 
+
+```{r Model2}
+lModel <- lm( "Employed~GNP.deflator+GNP+GNP.deflator+Armed.Forces+Population",data = dtData)
+summary(lModel)
+```
+
+```{r Predict2}
+# predict(lModel,dtData)
+```
+
+```{r Plot2}
+ggplot() + geom_point(aes(x = dtData[,Employed], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
+```
+
+**Observation:** Low error on prediction still and important features identified by it are GNP & Population. Normalizing the Employed count by Population and removing it from the equation to check the model. 
+
+#Itn3: 
+
+```{r Model3}
+# dtData2 <- dtData
+# dtData2[,Employed := Employed/Population]
+#why is this changing the Employed function in the original dataset?  todo: R nitty gritties 
+
+dtData[,EmployedPerPopulation := Employed/Population]
+
+lModel <- lm( "EmployedPerPopulation~GNP.deflator+GNP+GNP.deflator+Armed.Forces",data = dtData)
+summary(lModel)
+
+ggplot(data = dtData) + geom_point(aes(x = EmployedPerPopulation,y = GNP.deflator))
+```
+
+**Observation:** Model gone fully. How can division by population cause so much issue? 
+
+```{r Predict3}
+# predict(lModel,dtData)
+```
+
+```{r Plot3}
+ggplot() + geom_point(aes(x = dtData[,EmployedPerPopulation], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
+```
+
+### Itn4: Undoing population division. Removing it from equation and checking the model. 
+
+```{r Model4}
+
+lModel <- lm( "Employed~GNP.deflator+GNP+GNP.deflator+Armed.Forces",data = dtData)
+summary(lModel)
+```
+
+```{r Plot4}
+ggplot() + geom_point(aes(x = dtData[,Employed], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
+```
+
+**Observation:** Doesnt seem too wrong now. Seems accurate as well. Basically Employment numbers as a function of Gross National Product do make sense. 
+
+Now GNP & GNPDeflator would be highly correlated. How is this impacting the current model?
+
+```{r BugfixingTheGivenModel}
+#find correlation between the features. 
+cor(dtData)
+
+```
+
+**Feature Preprocess:** since GNP & GNP.deflator both are highly correlated, we can use either one of them. Checking model accuracy using both. 
+```{r AfterBugFixModel_GNPAlone}
+
+```
+
+```{r AfterBugFixModel_GNP.DeflatorAlone}
+
+```
+Understand the variables and if their correlation to Employment is making sense:
+1. GNP and the like: Yes
+2. Unemployed: Its Total - Employed so obviously cant take this
+3. Armed.Forces: Umm no. Or maybe somewhat a correlator. 
+4. Population: Nope. But important to normalize by population at any time.
+5. Year: Nope. 
+
+#Itn4: 
+Selecting between 2 correlated variables. GNP Vs GNP.deflator

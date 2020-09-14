@@ -1,0 +1,31 @@
+---
+title: "Text Classification"
+author: "Nirzaree"
+date: "14/07/2020"
+output: html_document
+---
+
+```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(data.table)
+library(keras)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+```
+
+```{r loadData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtIMDB <- dataset_imdb(num_words = 10000)
+
+dtTrain <- dtIMDB$train$x
+dtTrainLabels <- dtIMDB$train$y
+
+dtTest <- dtIMDB$test$x
+dtTestLabels <- dtIMDB$test$y
+
+word_index <- dataset_imdb_word_index()
+
+dtWordIndex <- data.table(
+  word = names(word_index),
+  id = unlist(word_index,use.names = F)
+)
+```
