@@ -7,219 +7,69 @@ output: html_document
 
 Goal: Understand regression concepts with examples
 
-What is regression? 
-Regression is a technique applied to estimate a continuous output variable as a function of one or more input variables.
+* What is regression?   
+  A technique applied to estimate a continuous output variable as a function of one or more input variables.
 
-What types of regression techniques exist? 
-1.Linear: $$y = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$$
-  + Univariate
-  + Multivariate
+* What types of regression techniques exist? 
+
+1. Linear: $$y = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$$    
+  + Univariate  
+  + Multivariate  
 2. Polynomial: $$y = a_0 + a_1*x_1 + a_2*(x_1)^2 + a_3*(x_2) + a_4*(x_2)^2 + a_5*x_1*x_2 + \epsilon$$
 3. Logistic: $$log(p_i/(1-p_i)) = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$$
 
+##Datasets {.tabset}
 
-```{r setup, include=FALSE}
+### Boston Housing 
+
+```{r housingsetup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
-library(ggplot2)
-library(e1071) #for skewness function
+library(mlbench)
+library(corr)
 ```
 
-## Datasets {.tabset}
+About the features: 
+CRIM - per capita crime rate by town : Should have an impact (negative correlation)
+ZN - proportion of residential land zoned for lots over 25,000 sq.ft. (?)
+INDUS - proportion of non-retail business acres per town. (?)
+CHAS - Charles River dummy variable (1 if tract bounds river; 0 otherwise) (maybe positive correlation)
+NOX - nitric oxides concentration (parts per 10 million) (negative correlation)
+RM - average number of rooms per dwelling (positive correlation)
+AGE - proportion of owner-occupied units built prior to 1940 (?)
+DIS - weighted distances to five Boston employment centres (negative correlation)
+RAD - index of accessibility to radial highways (positive correlation)
+TAX - full-value property-tax rate per $10,000 (?)
+PTRATIO - pupil-teacher ratio by town (negative correlation)
+B - 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town (negative correlation)
+LSTAT - % lower status of the population (negative correlation)
+MEDV - Median value of owner-occupied homes in $1000's
 
-### Longley
-About the dataset: 
-#### Iteration1: Employed Against all other variables. Blindly.
-
-```{r loadData}
-dtData <- data.table(longley)
-head(dtData)
+```{r housingload,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+data("BostonHousing2")
+summary(BostonHousing2)
 ```
 
-```{r Model}
-lModel <- lm("Employed~.",data = dtData)
-summary(lModel)
-```
+```{r FeatureSelection,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+plot(x = BostonHousing2$crim,y = BostonHousing2$medv) #negative effect 
+plot(x = BostonHousing2$rm,y = BostonHousing2$medv)
+plot(x = BostonHousing2$nox,y = BostonHousing2$medv)
+plot(x = BostonHousing2$lstat,y = BostonHousing2$medv)
+plot(x = BostonHousing2$tax,y = BostonHousing2$medv)
 
-```{r Plot}
-ggplot() + geom_point(aes(x = dtData[,Employed], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
-```
+cor(BostonHousing2$rm,BostonHousing2$medv)
 
-**Observation:** Low error on prediction but important features identified by it are Year,Number of people in the armed forces and number of people unemployed, of which atleast year and unemployed don't make sense. Hence removing them to see how effective the model is now
+RoomsModel <- lm(medv~rm,data = BostonHousing2)
+summary(RoomsModel) #not bad 
 
-#### Itn2:
+FewVarModel <- lm(medv~rm+crim+lstat+ptratio,BostonHousing2)
+summary(FewVarModel)
 
-```{r Model2}
-lModel <- lm( "Employed~GNP.deflator+GNP+GNP.deflator+Armed.Forces+Population",data = dtData)
-summary(lModel)
-```
+dtBostonHousing <- data.table(BostonHousing2)
+dtBostonHousing[,"cmedv" := NULL]
 
-```{r Predict2}
-# predict(lModel,dtData)
-```
+AllVarModel <- lm(medv~crim+zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+b+lstat,dtBostonHousing)
+summary(AllVarModel)
 
-```{r Plot2}
-ggplot() + geom_point(aes(x = dtData[,Employed], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
-```
-
-**Observation:** Low error on prediction still and important features identified by it are GNP & Population. Normalizing the Employed count by Population and removing it from the equation to check the model. 
-
-#### Itn3:
-
-```{r Model3}
-# dtData2 <- dtData
-# dtData2[,Employed := Employed/Population]
-#why is this changing the Employed function in the original dataset?  todo: R nitty gritties 
-
-dtData[,EmployedPerPopulation := Employed/Population]
-
-lModel <- lm( "EmployedPerPopulation~GNP.deflator+GNP+GNP.deflator+Armed.Forces",data = dtData)
-summary(lModel)
-
-ggplot(data = dtData) + geom_point(aes(x = EmployedPerPopulation,y = GNP.deflator))
-```
-
-**Observation:** Model gone fully. How can division by population cause so much issue? 
-
-```{r Predict3}
-# predict(lModel,dtData)
-```
-
-```{r Plot3}
-ggplot() + geom_point(aes(x = dtData[,EmployedPerPopulation], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
-```
-
-#### Itn4: Undoing population division. Removing it from equation and checking the model.
-
-```{r Model4}
-
-lModel <- lm( "Employed~GNP.deflator+GNP+GNP.deflator+Armed.Forces",data = dtData)
-summary(lModel)
-```
-
-```{r Plot4}
-ggplot() + geom_point(aes(x = dtData[,Employed], y = predict(lModel,dtData))) + geom_abline(slope = 1,intercept = 0)
-```
-
-**Observation:** Doesnt seem too wrong now. Seems accurate as well. Basically Employment numbers as a function of Gross National Product do make sense. 
-
-Now GNP & GNPDeflator would be highly correlated. How is this impacting the current model?
-
-```{r BugfixingTheGivenModel}
-#find correlation between the features. 
-cor(dtData)
-
-```
-
-**Feature Preprocess:** since GNP & GNP.deflator both are highly correlated, we can use either one of them. Checking model accuracy using both. 
-```{r AfterBugFixModel_GNPAlone}
-
-```
-
-```{r AfterBugFixModel_GNP.DeflatorAlone}
-
-```
-Understand the variables and if their correlation to Employment is making sense:
-1. GNP and the like: Yes
-2. Unemployed: Its Total - Employed so obviously cant take this
-3. Armed.Forces: Umm no. Or maybe somewhat a correlator. 
-4. Population: Nope. But important to normalize by population at any time.
-5. Year: Nope. 
-
-Itn4: 
-Selecting between 2 correlated variables. GNP Vs GNP.deflator
-
-### Cars
-
-#### Resource: https://www.machinelearningplus.com/machine-learning/complete-introduction-linear-regression-r/
-
-#### Graphical analysis: Visualize the relationship
-1. Step1 : Load Data
-```{r loadData5}
-# head(cars)
-```
-
-2. Graphical analysis: a. Visualize the relationship
-```{r exploredata}
-# head(cars)
-# plot(x = cars[,"speed"],y = cars[,"dist"])
-
-#new function alert!
-scatter.smooth(x = cars[,"speed"],y = cars[,"dist"])
-```
-
-**Observation:** Looks linearish
-
-2. Graphical analysis: b. Observe outliers
-```{r outlierPlot}
-boxplot(cars[,"speed"],main = "Speed",sub = paste("Outlier values: ",boxplot.stats(cars[,"speed"])$out))
-boxplot(cars[,"dist"],main = "Distance",sub = paste("Outlier values: ",boxplot.stats(cars[,"dist"])$out))
-```
-
-**Observation:** One outlier in distance column.
-
-2. Graphical analysis: c. Check if response variable is close to normal 
-Question: why do need to check this? what does this imply? 
-
-```{r NormalPlot}
-par(mfrow=c(1,2))
-plot(density(cars[,"speed"]),main="Speed",sub = paste("Skewness = ",round(skewness(cars[,"speed"]),2)))
-plot(density(cars[,"dist"]),main="Dist",sub = paste("Skewness = ",round(skewness(cars[,"dist"]),2)))
-```
-
-```{r CorrelationAnalysis}
-cor(cars[,"speed"],cars[,"dist"])
-# cor(cars[,"dist"],cars[,"speed"])
-
-```
-
-**Observation:** cor < 0.2 means that the variation in response variable (Y) is not explained by the predictor variable. Here the correlation is ~80% which is good. 
-
-**Build the model:** function to be used lm. 
-                      lm(formula,data)
-```{r LinearModel}
-LinearModelCars <- lm(formula = "dist~speed",data = cars)
-```
-
-**Is the model good enough?** Not known yet. It has to be statistically significant 
-```{r ModelDiagnostics}
-summary(LinearModelCars)
-```
-
-```{r SplitTrainTest}
-trainingIndices = sample(seq(1:nrow(cars)),0.8*nrow(cars))
-dtTrain = cars[trainingIndices,]
-dtTest = cars[-trainingIndices,]
-LinearModelCars2 = lm("dist~speed",data = dtTrain)
-summary(LinearModelCars2)
-
-dtTest[,"predDist"] <- predict(LinearModelCars2,dtTest)
-
-cor(dtTest$dist,dtTest$predDist)
-
-# plot(dtTest[,"predDist"],dtTest[,"dist"])
-
-AIC(LinearModelCars2)
-
-#Calculate MAPE
-mean(abs((dtTest[,"predDist"] - dtTest[,"dist"])/dtTest[,"dist"]))
-
-#Mean Absolute Error
-mean(abs(dtTest[,"predDist"] - dtTest[,"dist"]))
-
-#Mean Squared Error
-mean(((dtTest[,"predDist"] - dtTest[,"dist"]))^2)
-
-#RMSE
-sqrt(mean(((dtTest[,"predDist"] - dtTest[,"dist"]))^2))
-
-#min max accuracy
-
-```
-##Whaat metric does lm reduce? 
-
-```{r kfoldcv}
-library(DAAG)
-
-CVlm(data = cars,m = 10,form.lm = dist~speed)
+plot(AllVarModel)
 ```
 
