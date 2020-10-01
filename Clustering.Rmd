@@ -10,6 +10,7 @@ library(data.table)
 library(VIM)
 library(lubridate)
 library(leaflet)
+library(ggmap)
 ```
 
 ```{r loadData}
@@ -55,6 +56,15 @@ dtUberData[,Sec := factor(second(Date.Time))]
 
 ```{r Model}
 #try with different clusters
+set.seed(100)
+Clusters <- kmeans(x = dtUberData[,c("Lat","Lon")],centers = 5)
+str(Clusters)
+
+dtUberData[,Boroughs := as.factor(Clusters$cluster)]
+
+# leaflet() %>% addTiles() %>% addMarkers(lng = dtUberData[,Lon],lat = dtUberData[,Lat])
+# ggmap(NYCMap) + geom_point(aes(x = Lon[], y = Lat[], colour = as.factor(Boroughs)),data = dtUberData) +
+#   ggtitle("NYC Boroughs using KMean")
 
 ```
 

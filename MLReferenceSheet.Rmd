@@ -1,0 +1,31 @@
+---
+title: "ML Reference Sheet"
+author: "Nirzaree"
+date: "19/09/2020"
+output: html_document
+---
+1. what to do in each type of problem ; plus example problem
+```{r LinearRegression,}
+#function to use 
+```
+
+```{r MultipleLinearRegression}
+#predicting house prices 
+# LinModel <- lm(lformula,data = dtTrain)
+```
+
+
+```{r LogisticRegression}
+
+```
+
+```{r PolynomialRegression}
+#house prices
+# poly function : args degree , raw = TRUE
+
+```
+
+```{r }
+
+```
+

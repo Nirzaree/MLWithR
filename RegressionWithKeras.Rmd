@@ -1,0 +1,128 @@
+---
+title: "Regression with Keras"
+author: "Nirzaree"
+date: "23/09/2020"
+output: html_document
+---
+https://tensorflow.rstudio.com/tutorials/beginners/basic-ml/tutorial_basic_regression/
+```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(keras)
+library(tfdatasets)
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r loadData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+boston_housing <- dataset_boston_housing()
+
+c(train_data,train_labels) %<-% boston_housing$train
+c(test_data,test_labels) %<-% boston_housing$test
+```
+
+```{r inspectdata,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+train_data[1,]
+
+#add column names
+column_names <- c('CRIM', 'ZN', 'INDUS', 'CHAS', 'NOX', 'RM', 'AGE', 
+                  'DIS', 'RAD', 'TAX', 'PTRATIO', 'B', 'LSTAT')
+
+#some fancy dplyr + tibble stuff in the tutorial which I am ignoring for now.
+#cant ignore because see note below
+train_df <- train_data %>% as_tibble(.name_repair = "minimal") %>% setNames(column_names) %>% mutate(labels = train_labels)
+
+test_df <- test_data %>% as_tibble(.name_repair = "minimal") %>% setNames(column_names) %>% mutate(labels = test_labels)
+```
+
+todo: understand why standard scaling and not simply normalizing 
+Also in normal regression using this dataset, no preproc is done
+
+```{r Preprocess,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+spec <- feature_spec(train_df,labels ~ .) %>% step_numeric_column(all_numeric(),normalizer_fn = scaler_standard()) %>% fit() 
+#note : so the above didnt work without doing all the fancy dplyr tibble stuff. It was to create a dataset that is acceptable to tensorflow
+
+spec
+```
+
+```{r Model,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+build_model <- function() {
+  input <- layer_input_from_dataset(train_df %>% select(-labels))
+
+  output <- input %>% layer_dense_features(dense_features(spec)) %>% 
+    layer_dense(units = 64,activation = 'relu') %>% 
+    layer_dense(units = 64,activation = 'relu') %>%
+    layer_dense(units = 1)
+
+  model <- keras_model(input,output)
+
+  summary(model)
+
+  model %>% compile(
+    loss = "mse",
+    optimizer = optimizer_rmsprop(),
+    metrics = list("mean_absolute_error")
+  )
+  model
+}
+```
+
+```{r ModelBuild,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+print_dot_callback <- callback_lambda(on_epoch_end = function(epoch,logs) {
+  if (epoch %% 80 == 0) cat("\n")
+  cat(".")
+})
+
+model <- build_model()
+
+history <- model %>% fit(
+  x = train_df %>% select(-labels),
+  y = train_df$labels,
+  epochs = 500,
+  validation_split = 0.2,
+  verbose = 0,
+  callbacks = list(print_dot_callback)
+)
+```
+```{r CheckModel,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+plot(history)
+```
+
+Little improvement after certain epochs (> 200). Let's update the fit to stop running when there's little improvement. 
+```{r preventoverfitting,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+early_stopping <- callback_early_stopping(monitor = "val_loss",patience = 20)
+
+model <- build_model()
+
+history <- model %>% fit(
+  x = train_df %>% select(-labels),
+  y = train_df$labels,
+  epochs = 500,
+  validation_split = 0.2,
+  verbose = 0,
+  callbacks = list(early_stopping)
+)
+
+plot(history) #fix this: todo: error: arguments imply differing number of rows: 500, 260, 2000
+```
+
+```{r Validateontestset,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+c(loss, mae) %<-% (model %>% evaluate(test_df %>% select(-labels), test_df$labels, verbose = 0))
+paste0("MAE on test set $",sprintf("%.2f",mae*1000))
+```
+
+```{r PredictOnTestData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+test_predictions <- model %>% predict(test_df %>% select(-labels))
+
+test_predictions
+```
+
+Summary:
+Too much new info here. 
+
+1. Some crazy conversion to tensorflow dataframe
+2. Preprocess : some crazy functions to do standardscaling for all features
+3. Model function: 
+4. Model fit with history 
+5. Plot history
+6. Early stopping for preventing overfitting
+7. Model validation using MAE 
+8. Prediction on new data

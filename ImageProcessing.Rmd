@@ -4,6 +4,7 @@ author: "Nirzaree"
 date: "10/07/2020"
 output: html_document
 ---
+Tutorial followed: https://keras.rstudio.com/articles/tutorial_basic_classification.html
 
 ```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(keras)
@@ -24,7 +25,7 @@ class_names = c('T-shirt/top',
                 'Ankle boot')
 ```
 
-```{r LookAtTheInputs,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r LookAtTheInputs,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 
 image(dtFashionMNIST$train$x[1,,])
 # https://stackoverflow.com/questions/5638462/r-image-of-a-pixel-matrix
@@ -34,18 +35,17 @@ dtFashionMNIST$train$y[1]
 summary(dtFashionMNIST$train$x[1,,])
 
 #Plot inputs of each category 
-par(mfrow=c(5,5)) 
-lapply(seq(1:15), function(x) {
-  rotate <- function(x) t(apply(x, 2, rev)) #https://www.r-bloggers.com/creating-an-image-of-a-matrix-in-r-using-image/
-  image(rotate(dtFashionMNIST$train$x[x,,]))
-})
+# par(mfrow=c(5,5)) 
+# lapply(seq(1:15), function(x) {
+#   rotate <- function(x) t(apply(x, 2, rev)) #https://www.r-bloggers.com/creating-an-image-of-a-matrix-in-r-using-image/
+#   image(rotate(dtFashionMNIST$train$x[x,,]))
+# })
 
 #todo: why 5x5 not working.
 #add labels to each input
 ```
 
-
-```{r PreProcess,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r PreProcess,include=TRUE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 
 #Normalize the inputs
 c(dtTrainImages,dtTrainLabels) %<-% dtFashionMNIST$train # todo: (I dont understand this operator very well.https://keras.rstudio.com/articles/tutorial_basic_classification.html)
@@ -54,9 +54,18 @@ c(dtTestImages,dtTestLabels) %<-% dtFashionMNIST$test
 dtTrainImages <- dtTrainImages / 255
 dtTestImages <- dtTestImages / 255
 
+par(mfcol=c(5,5))
+par(mar=c(0, 0, 1.5, 0), xaxs='i', yaxs='i')
+for (i in 1:25) { 
+  img <- dtTrainImages[i, , ]
+  img <- t(apply(img, 2, rev)) 
+  image(1:28, 1:28, img, col = gray((0:255)/255), xaxt = 'n', yaxt = 'n',
+        main = paste(class_names[dtTrainLabels[i] + 1]))
+}
+
 ```
 
-```{r Model,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r Model,include=TRUE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 ClassificationModel <- keras_model_sequential()
 ClassificationModel %>% layer_flatten(input_shape = c(28,28)) %>% layer_dense(units = 128,activation = 'relu') %>% layer_dense(units = 10,activation = 'softmax')
 
@@ -66,11 +75,11 @@ ClassificationModel %>% compile(
   metrics = c('accuracy')
 )
 
-ClassificationModel %>% fit(dtTrainImages,dtTrainLabels,epochs = 5)
+ClassificationModel %>% fit(dtTrainImages,dtTrainLabels,epochs = 5,verbose = 2)
 
 ```
 
-```{r EvaluateModel,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r EvaluateModel,include=TRUE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 EvalScore <- ClassificationModel %>% evaluate(dtTestImages,dtTestLabels)
 
 Predictions <- ClassificationModel %>% predict(dtTestImages)
@@ -78,18 +87,18 @@ Predictions <- ClassificationModel %>% predict(dtTestImages)
 which.max(Predictions[1,])
 # Predictions[1,10]
 
-Predictions_Classes <- ClassificationModel %>% predict_classes(dtTestImages) 
+Predictions_Classes <- ClassificationModel %>% predict_classes(dtTestImages)
 
 par(mfcol=c(5,5))
 par(mar=c(0, 0, 1.5, 0), xaxs='i', yaxs='i')
-for (i in 1:25) { 
+for (i in 1:25) {
   img <- dtTestImages[i, , ]
-  img <- t(apply(img, 2, rev)) 
+  img <- t(apply(img, 2, rev))
   # subtract 1 as labels go from 0 to 9
   predicted_label <- which.max(Predictions[i, ]) - 1
   true_label <- dtTestLabels[i]
   if (predicted_label == true_label) {
-    color <- '#008800' 
+    color <- '#008800'
   } else {
     color <- '#bb0000'
   }
@@ -100,6 +109,24 @@ for (i in 1:25) {
 }
 ```
 
+**Summary:**
+  *Library: keras
+  *Steps: 
+    + Load Data 
+    + Extract training and testing data
+    + Preprocess training and testing data : Normalize (divide by max value) for neural network entry.
+    + Model: 3 layers, sequential: 
+      1. flattening layer: size = same as inputs = 28x28
+      2. dense layer: activation function: "ReLU: Rectified Linear Unit",size = 128 (Don't yet know how size is determined in dense layers)
+      3. dense layer: activation function: "Softmax:",size = same as output classes : 10 in this case
+    + Model config:
+      1. Optimizer: adam
+      2. Loss: sparse_categorical_crossentropy 
+      3. Metric: accuracy
+    + Evaluate model: evaluate function
+    + Predict: predict followed by which.max, or predict_classes
+    + Plotting pixel images: image function
+      
 #todo: 
 # visualize the nn
 # what if u dont normalize

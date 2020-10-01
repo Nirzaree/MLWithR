@@ -39,7 +39,9 @@ Why are they useful here?
 What do we check to make sure its not misleading? 
 How do we choose the validation metric here? 
 
+## Datasets {.tabset}
 
+### Iris
 
 ```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
@@ -159,3 +161,158 @@ confusionMatrix(dtTest[,predictedClass],dtTest[,Species])
 ```
 
 **Summary:**
+
+### knn-BreastCancenWisconsin
+tutorial url: ml-tutorials.kyrcha.#info/knn.html
+```{r setupknnbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(class)
+
+```
+
+
+```{r loadDatabreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+fileURL <- "http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+
+dtData <- data.table(read.csv(fileURL,header = FALSE))
+str(dtData)
+```
+
+```{r PreProcessbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#first column is id column which is not required
+dtData <- dtData[,-1]
+
+#put names in the columns
+names(dtData) <- c("ClumpThickness",
+"UniformityCellSize",
+"UniformityCellShape",
+"MarginalAdhesion",
+"SingleEpithelialCellSize",
+"BareNuclei",
+"BlandChromatin",
+"NormalNucleoli",
+"Mitoses",
+"Class")
+
+#V7 is char. because ? whenever missing data. 
+dtData[,BareNuclei := ifelse(BareNuclei == "?",NA,BareNuclei)]
+dtData[,BareNuclei := as.integer(BareNuclei)]
+str(dtData)
+
+#make output categorical
+dtData[,Class := factor(Class,levels = c(2,4),labels = c("benign","malignant"))]
+
+print(summary(dtData))
+
+#check how balanced is the dataset
+print(summary(dtData$Class))
+
+```
+
+Note: Since range of all feature columns are same,we can probably get away with standardizing input data. 
+
+```{r TrainTestSplitbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+trainingIndices <- sample(seq(1:nrow(dtData)),0.7*nrow(dtData))
+dtTrain <- dtData[trainingIndices,]
+dtTrain <- dtTrain[complete.cases(dtTrain),]
+dtTrainX <- dtTrain[,1:9]
+dtTrainY <- dtTrain$Class #dtTrain[,10]  this doesnt work because labels have to be a vector.
+dtValidation <- dtData[-trainingIndices,]
+dtValidation <- dtValidation[complete.cases(dtValidation),]
+dtValidationX <- dtValidation[,1:9]
+dtValidationY <- dtValidation$Class  #dtValidation[,10] same as above
+```
+
+```{r Modelbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+Predictions <- knn(train = dtTrainX,test = dtValidationX,cl = dtTrainY,k = 1)
+```
+
+```{r Validatebreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtConfusionMatrix <- table(Predictions,dtValidationY)
+
+#how to choose the positive class ? 
+#class imbalance? 
+#Accuracy
+Accuracy = sum(Predictions == dtValidationY)/length(dtValidationY)
+
+#Precision
+Precision = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[2,1])
+
+#Recall
+Recall = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[1,2])
+#F1 score
+
+```
+
+
+```{r CrossValidation,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+PredictionsknnCV <- knn.cv(train = dtTrainX,cl = dtTrainY,k = 1)
+
+table(PredictionsknnCV,dtTrainY)
+
+sum(PredictionsknnCV == dtTrainY)/length(dtTrainY)
+```
+
+https://courses.cognitiveclass.ai/courses/course-v1:BigDataUniversity+ML0151EN+2017/courseware/76d637cbe8024e509dc445df847e6c3a/d2529e01786a412fb009daef4b002a48/1?activate_block_id=block-v1%3ABigDataUniversity%2BML0151EN%2B2017%2Btype%40vertical%2Bblock%40356f36b091764fa9a43ccb737e586563
+
+New function alert: expand.grid : 
+
+```{r ChoosekValue,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# modelControl <- trainControl(method = "cv",
+                             # number = 10)
+
+modelControl <- trainControl(method = "repeatedcv",
+                             number = 5,
+                             repeats = 2)
+knngrid <- expand.grid(k = c(1,3,5,7,9))
+
+knn_k_search <- train(Class~.,
+                      data = dtTrain,
+                      method = "knn",
+                      trControl = modelControl,
+                      preProcess = c("center","scale"),#doing this is changing the results between this and default knn.
+                      tuneGrid = knngrid)
+
+knn_k_search
+```
+
+```{r defaultknncaretfit,}
+
+control <- trainControl(method = "cv",number = 10)
+metric <- "accuracy"
+defaultknn <- train(Class~.,
+                 data = dtTrain,
+                 method = "knn",
+                 metric = metric,
+                 trControl = control)
+
+summary(defaultknn)
+```
+
+Not a lot of changes with k values. What does that tell abotu the dataset? 
+
+
+Cross validation : caret easy settings
+optimal k value : caret does it
+Validation metrics : depends on the dataset I guess
+
+Summary: 
+knn :
+caret or class
+in class u specify k value
+check if overfitting by doing confusion matrix
+
+choosing k value 
+all in train function in caret
+metric
+method
+training control 
+preprocess
+
+Preprocess: center, scale, pca. 
+
+Validate: using accuracy,precision,recall etc
+Handle imbalance in class: ? Dont know really But can still chck if model is performing 
+
+how to tell the model abouot the positive class. 
+
+

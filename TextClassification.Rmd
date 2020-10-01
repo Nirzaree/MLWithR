@@ -4,6 +4,13 @@ author: "Nirzaree"
 date: "14/07/2020"
 output: html_document
 ---
+https://blogs.rstudio.com/ai/posts/2017-12-07-text-classification-with-keras/
+
+**Dataset:**
+IMDB: 50000 reviews: 
+Training data: 25000 reviews
+Testing data: 25000 reviews
+Balanced datasets: Equal number of positive and negative reviews
 
 ```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
@@ -22,10 +29,92 @@ dtTrainLabels <- dtIMDB$train$y
 dtTest <- dtIMDB$test$x
 dtTestLabels <- dtIMDB$test$y
 
-word_index <- dataset_imdb_word_index()
+# word_index <- dataset_imdb_word_index()
 
-dtWordIndex <- data.table(
-  word = names(word_index),
-  id = unlist(word_index,use.names = F)
+# dtWordIndex <- data.table(
+#   word = names(word_index),
+#   id = unlist(word_index,use.names = F)
+# )
+```
+
+```{r ExploreData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# reverse_word_index <- names(word_index)
+# names(reverse_word_index) <- word_index
+# decoded_review <- sapply(dtTrain[[1]],function(index) {
+#   word <- if (index >= 3) reverse_word_index[[as.character(index - 3)]]
+#   if (!is.null(word)) word else "?"
+# })
+# 
+# cat(decoded_review)
+
+```
+
+**Preprocess:**
+* Integers cannot be fed to neural network directly. They need to be converted to tensors. 
+There are 2 techniques that can be used: 
+  1. 
+```{r PrepareData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#one hot encode
+
+onehotencode <- function(sequence) {
+  encoding  <- matrix(data = 0,nrow = length(sequence),ncol = 10000)
+  for (index in 1:length(sequence)) {
+    encoding[index,sequence[[index]]] <- 1
+  }
+  return(encoding)
+}
+
+x_train <- onehotencode(dtTrain)
+y_test <- onehotencode(dtTest)
+
+#convert labels from integer to numeric (todo: why so?)
+x_labels <- as.numeric(dtTrainLabels)
+y_labels <- as.numeric(dtTestLabels)
+
+```
+
+[Architecture of the model](https://blogs.rstudio.com/ai/posts/2017-12-07-text-classification-with-keras/images/3_layer_network.png)
+
+```{r Model,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+model <- keras_model_sequential() %>% layer_dense(units = 16,activation = 'relu',input_shape = c(10000)) %>% layer_dense(units = 16,activation = 'relu') %>% layer_dense(units = 1,activation = 'sigmoid')
+
+#loss function and optimizer
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
 )
 ```
+
+```{r ModelValidation,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#split train into train + validation
+validation_indices <- 1:10000
+
+x_val <- x_train[validation_indices,]
+x_train_partial <- x_train[-validation_indices,]
+
+x_labels_val <- x_labels[validation_indices]
+x_labels_partial <- x_labels[-validation_indices]
+
+history <- model %>% fit(
+  x_train_partial,
+  x_labels_partial,
+  epochs = 20,
+  batch_size = 512, 
+  validation_data = list(x_val,x_labels_val)
+)
+
+```
+todo: what does batch size mean here? 
+Overfitting beyond epoch 4.  
+
+```{r finalmodel,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+model %>% fit(x_train,x_labels,epochs = 4,batch_size = 512)
+results <- model %>% evaluate(y_test,y_labels)
+```
+
+```{r predictonnewdata,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+model %>% predict(y_test[1:10,])
+
+```
+

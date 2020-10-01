@@ -11,14 +11,14 @@
 # 
 # This is NOT the actual answer - just the format in which you should provide your answer.
 
-input <- readLines(file("stdin"))
-input <- strsplit(input," ")
+# input <- readLines(file("stdin"))
+# input <- strsplit(input," ")
 
-dtData <- data.table(
-  PhysicsScores = as.numeric(input[[1]]),
-  HistoryScores = as.numeric(input[[2]])
-)
-
+# dtData <- data.table(
+  # PhysicsScores = as.numeric(input[[1]]),
+  # HistoryScores = as.numeric(input[[2]])
+# )
+library(data.table)
 dtData <- data.table(
   PhysicsScores = c(15,12,8,8,7,7,7,6,5,3),
   HistoryScores = c(10,25,17,11,13,17,20,13,9,15)
