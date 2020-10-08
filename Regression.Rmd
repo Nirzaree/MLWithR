@@ -2,74 +2,185 @@
 title: "Regression"
 author: "Nirzaree"
 date: "31/08/2020"
-output: html_document
+output: 
+  html_document:
+    fig_caption: true
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+toc_depth: 3
 ---
 
 Goal: Understand regression concepts with examples
 
+## Theory
 * What is regression?   
   A technique applied to estimate a continuous output variable as a function of one or more input variables.
 
 * What types of regression techniques exist? 
 
-1. Linear: $$y = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$$    
-  + Univariate  
-  + Multivariate  
-2. Polynomial: $$y = a_0 + a_1*x_1 + a_2*(x_1)^2 + a_3*(x_2) + a_4*(x_2)^2 + a_5*x_1*x_2 + \epsilon$$
-3. Logistic: $$log(p_i/(1-p_i)) = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$$
+  1. Linear: $y = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$    
+      + Univariate  
+      + Multivariate  
+  2. Polynomial: $y = a_0 + a_1*x_1 + a_2*(x_1)^2 + a_3*(x_2) + a_4*(x_2)^2 + a_5*x_1*x_2 + \epsilon$
+  3. Logistic: $log(p_i/(1-p_i)) = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$
 
-##Datasets {.tabset}
+<!-- * Assumptions of linear regression -->
 
-### Boston Housing 
+<!-- * Metrics for evaluaring a linear regression model -->
 
-```{r housingsetup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+## Approach 1: Without standard practices applied + without domain knowhow of the problem
+Intuitively we would do the following (with no theory knowhow on feature engineering, model validation..) 
+1. Load the dataset & check if there are features that correlate significantly and linearly (well we can transform the input data and it has its nuances but for now we just try to see what best fits the data as it is) the output/response variable
+3. Build a model with all variables
+4. Check for important variables
+5. Reduce the model to include only the significant variables
+6. Check how good the model is: 
+7. If it is good enough, use it to make predictions
+
+## MTCars Dataset
+
+```
+Dataset description: mtcars
+The data was extracted from the 1974 Motor Trend US magazine, and comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models).
+
+Format: 
+A data frame with 32 observations on 11 (numeric) variables.
+
+[, 1]	mpg	Miles/(US) gallon
+[, 2]	cyl	Number of cylinders
+[, 3]	disp	Displacement (cu.in.)
+[, 4]	hp	Gross horsepower
+[, 5]	drat	Rear axle ratio
+[, 6]	wt	Weight (1000 lbs)
+[, 7]	qsec	1/4 mile time
+[, 8]	vs	Engine (0 = V-shaped, 1 = straight)
+[, 9]	am	Transmission (0 = automatic, 1 = manual)
+[,10]	gear	Number of forward gears
+[,11]	carb	Number of carburetors
+
+Task: Regression analysis of fuel efficiency
+
+Reference: https://rstudio-pubs-static.s3.amazonaws.com/157017_d791d59b482441d386ce8b31b3337ecf.html
+```
+### Intuitive approach
+```{r setup1,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
-library(mlbench)
-library(corr)
+library(corrplot)
 ```
 
-About the features: 
-CRIM - per capita crime rate by town : Should have an impact (negative correlation)
-ZN - proportion of residential land zoned for lots over 25,000 sq.ft. (?)
-INDUS - proportion of non-retail business acres per town. (?)
-CHAS - Charles River dummy variable (1 if tract bounds river; 0 otherwise) (maybe positive correlation)
-NOX - nitric oxides concentration (parts per 10 million) (negative correlation)
-RM - average number of rooms per dwelling (positive correlation)
-AGE - proportion of owner-occupied units built prior to 1940 (?)
-DIS - weighted distances to five Boston employment centres (negative correlation)
-RAD - index of accessibility to radial highways (positive correlation)
-TAX - full-value property-tax rate per $10,000 (?)
-PTRATIO - pupil-teacher ratio by town (negative correlation)
-B - 1000(Bk - 0.63)^2 where Bk is the proportion of blacks by town (negative correlation)
-LSTAT - % lower status of the population (negative correlation)
-MEDV - Median value of owner-occupied homes in $1000's
+### 1. Load Data
+```{r loaddata1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtMTCars <- data.table(mtcars)
+head(dtMTCars)
 
-```{r housingload,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-data("BostonHousing2")
-summary(BostonHousing2)
+summary(dtMTCars)
 ```
 
-```{r FeatureSelection,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-plot(x = BostonHousing2$crim,y = BostonHousing2$medv) #negative effect 
-plot(x = BostonHousing2$rm,y = BostonHousing2$medv)
-plot(x = BostonHousing2$nox,y = BostonHousing2$medv)
-plot(x = BostonHousing2$lstat,y = BostonHousing2$medv)
-plot(x = BostonHousing2$tax,y = BostonHousing2$medv)
+**High level summary**   
 
-cor(BostonHousing2$rm,BostonHousing2$medv)
+* Predictor variables: 10  
+  + Numeric variables: 8  
+  + Categorical variables: 2 (Engine (0 = V-shaped, 1 = straight) & Transmission (0 = automatic, 1 = manual))     
+* Response variable: mpg	Miles/(US) gallon  
 
-RoomsModel <- lm(medv~rm,data = BostonHousing2)
-summary(RoomsModel) #not bad 
+### 2. Feature Engineering
+Let's plot the output variable against each of the input variables.
+We also plot best fit polynomial for each variable. 
 
-FewVarModel <- lm(medv~rm+crim+lstat+ptratio,BostonHousing2)
-summary(FewVarModel)
+```{r featureanalysis,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
+# corrplot(cor(dtMTCars))
 
-dtBostonHousing <- data.table(BostonHousing2)
-dtBostonHousing[,"cmedv" := NULL]
+#some more plots
+par(mfrow = c(1,3))
+plot(x = dtMTCars$cyl,y = dtMTCars$mpg,main = "MPG Vs number of cylinders")
+plot(x = dtMTCars$wt,y = dtMTCars$mpg,main = "MPG Vs weight")
+genericformula = y~x
+ggplot(dtMTCars,aes(x = wt,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) #had to install ggpmisc for stat_poly_eq
+plot(x = dtMTCars$am,y = dtMTCars$mpg,main = "MPG Vs transmission type")
 
-AllVarModel <- lm(medv~crim+zn+indus+chas+nox+rm+age+dis+rad+tax+ptratio+b+lstat,dtBostonHousing)
-summary(AllVarModel)
+par(mfrow = c(1,3))
+plot(x = dtMTCars$hp,y = dtMTCars$mpg,main = "MPG Vs power")
+plot(x = dtMTCars$disp,y = dtMTCars$mpg,main = "MPG Vs displacement")
+plot(x = dtMTCars$qsec,y = dtMTCars$mpg,main = "MPG Vs qsec") #positive relation but quite a lot of variation.
 
-plot(AllVarModel)
+par(mfrow = c(1,3))
+plot(x = dtMTCars$drat,y = dtMTCars$mpg,main = "MPG Vs rear axle ratio") #not great relation
+plot(x = dtMTCars$carb,y = dtMTCars$mpg,main = "MPG Vs number of carburators") #not great relation
+plot(x = dtMTCars$gear,y = dtMTCars$mpg,main = "MPG Vs number of forward gears") #not great relation
+
+plot(x = dtMTCars$hp,y = dtMTCars$vs,main = "MPG Vs Engine type")
+
 ```
 
+<!-- **Observations:** -->
+<!-- MPG against -->
+<!-- 1. Number of cylinders: As number of cylinders increase, MPG is reducing. However number of cylinders being a discrete variable with only 3 values in the dataset, would not be able to discern mpg on a finer scale. -->
+<!-- 2. Weight: Inversely proportional with mpg. Linear relation. Weight being a continuous variable is nicely fitting the mpg line.  -->
+<!-- 3. Transmission: Transmission type 1 (manual) overall has higher mpg than class 0 (automatic) however there is a lot of overlapping data meaning that other variables would be required for better mpg prediction along with transmission type. -->
+<!-- 4.  -->
+
+### 3. Build model: Simple linear regression
+We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables? todo:)
+
+```{r Model,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+MultLinearModel <- lm(mpg~wt+cyl+hp,data = dtMTCars)
+summary(MultLinearModel)
+```
+
+<!-- ### 3. Build model: Simple linear regression -->
+<!-- We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables? todo:) -->
+<!-- ```{r Model,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- MultLinearModel <- lm(mpg~wt+cyl+hp,data = dtMTCars) -->
+<!-- summary(MultLinearModel) -->
+<!-- ``` -->
+
+<!-- ### 4. Build model: Stepwise linear regression -->
+<!-- ```{r StepwiseModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- LinModelStep <- step(lm(mpg~.,dtMTCars),direction = "both") -->
+<!-- summary(LinModelStep) -->
+<!-- ``` -->
+
+<!-- ```{r ValidateModel,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- par(mfrow=c(2,2)) -->
+<!-- plot(LinModelStep) -->
+<!-- ``` -->
+
+<!-- Observations:  -->
+<!-- 1. Residuals Vs fitted: No pattern in residuals vs fitted values.  -->
+<!-- 2. Q-Q plot: Follow the line for the most part and can be assumed to be normally distributed. -->
+<!-- 3. Variance in residuals: Fairly flat line hence variance is reasonably constant across predictor range (homoscedasticity) -->
+<!-- 4. Cooke's distance : for the 3 higher points is < 0.5.  -->
+<!-- Threshold Generally: 4/N or 4/(n - k -1) where k = number of explanatory variables & N = number of observations.  -->
+<!-- Need to check about how much cooke's distance is bad, with respect to the given problem. -->
+
+<!-- Finally, stepwise linear regression with CV:  -->
+<!-- <!-- https://topepo.github.io/caret/train-models-by-tag.html for caret model names-->  -->
+
+<!-- ### 5. Build model: Stepwise linear regression with cross validation -->
+<!-- ```{r WithCV,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- library(caret) -->
+
+<!-- trainingControl <- trainControl(method = "cv",number = 10) -->
+
+<!-- LinModelWithCV <- train(mpg~., -->
+<!--                         data = dtMTCars, -->
+<!--                         method = "lmStepAIC", -->
+<!--                         trControl = trainingControl -->
+<!--                       ) -->
+
+<!-- summary(LinModelWithCV) -->
+
+<!-- LinModelWithCV$results -->
+
+<!-- summary(LinModelWithCV$finalModel) -->
+<!-- #with DAAG library's function:  -->
+<!-- # cv.lm(data = dtMTCars,mpg~.) -->
+<!-- ``` -->
+
+## Summary
+
+todo: understand results of cv
+understand params in cross validation folds, iterations
+formatting
+high level summary: dataset params :categorical variables numeric variables
