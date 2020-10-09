@@ -10,6 +10,9 @@ output:
     toc_collapsed: true
 toc_depth: 3
 ---
+have the intuitive nondomain approach up:
+next domain + intuition approach
+domain + intuition + best practice 
 
 Goal: Understand regression concepts with examples
 
@@ -29,10 +32,11 @@ Goal: Understand regression concepts with examples
 
 <!-- * Metrics for evaluaring a linear regression model -->
 
-## Approach 1: Without standard practices applied + without domain knowhow of the problem
-Intuitively we would do the following (with no theory knowhow on feature engineering, model validation..) 
+## Intuitive Approach
+Intuitively we would do the following (with no theory knowhow on feature engineering,validation of model etc) 
+
 1. Load the dataset & check if there are features that correlate significantly and linearly (well we can transform the input data and it has its nuances but for now we just try to see what best fits the data as it is) the output/response variable
-3. Build a model with all variables
+3. Build a model with all variables 
 4. Check for important variables
 5. Reduce the model to include only the significant variables
 6. Check how good the model is: 
@@ -67,6 +71,10 @@ Reference: https://rstudio-pubs-static.s3.amazonaws.com/157017_d791d59b482441d38
 ```{r setup1,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
 library(corrplot)
+library(ggplot2)
+library(ggpmisc)
+library(grid)
+library(gridExtra)
 ```
 
 ### 1. Load Data
@@ -92,24 +100,33 @@ We also plot best fit polynomial for each variable.
 # corrplot(cor(dtMTCars))
 
 #some more plots
-par(mfrow = c(1,3))
-plot(x = dtMTCars$cyl,y = dtMTCars$mpg,main = "MPG Vs number of cylinders")
-plot(x = dtMTCars$wt,y = dtMTCars$mpg,main = "MPG Vs weight")
 genericformula = y~x
-ggplot(dtMTCars,aes(x = wt,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) #had to install ggpmisc for stat_poly_eq
-plot(x = dtMTCars$am,y = dtMTCars$mpg,main = "MPG Vs transmission type")
 
-par(mfrow = c(1,3))
-plot(x = dtMTCars$hp,y = dtMTCars$mpg,main = "MPG Vs power")
-plot(x = dtMTCars$disp,y = dtMTCars$mpg,main = "MPG Vs displacement")
-plot(x = dtMTCars$qsec,y = dtMTCars$mpg,main = "MPG Vs qsec") #positive relation but quite a lot of variation.
+cylplot <- ggplot(dtMTCars,aes(x = cyl,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs number of cylinders") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) 
 
-par(mfrow = c(1,3))
-plot(x = dtMTCars$drat,y = dtMTCars$mpg,main = "MPG Vs rear axle ratio") #not great relation
-plot(x = dtMTCars$carb,y = dtMTCars$mpg,main = "MPG Vs number of carburators") #not great relation
-plot(x = dtMTCars$gear,y = dtMTCars$mpg,main = "MPG Vs number of forward gears") #not great relation
+dispplot <- ggplot(dtMTCars,aes(x = disp,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs displacement") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) 
 
-plot(x = dtMTCars$hp,y = dtMTCars$vs,main = "MPG Vs Engine type")
+hpplot <- ggplot(dtMTCars,aes(x = hp,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs horsepower") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) 
+
+dratplot <- ggplot(dtMTCars,aes(x = drat,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs rear axle ratio") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) #not great relation
+
+grid.arrange(cylplot,dispplot,hpplot,dratplot,nrow = 2)
+
+wtplot <- ggplot(dtMTCars,aes(x = wt,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs weight") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) 
+
+qsecplot <- ggplot(dtMTCars,aes(x = qsec,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs qsec") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) #positive relation but quite a lot of variation.
+
+vsplot <- ggplot(dtMTCars,aes(x = vs,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs engine type") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE)
+
+amplot <- ggplot(dtMTCars,aes(x = am,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs transmission type") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) 
+
+grid.arrange(wtplot,qsecplot,vsplot,amplot,nrow = 2)
+
+gearplot <- ggplot(dtMTCars,aes(x = gear,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs number of forward gears") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE)
+
+carbplot <- ggplot(dtMTCars,aes(x = qsec,y = mpg)) + geom_point() + geom_smooth(formula = genericformula,method = "lm") + ggtitle("MPG Vs number of carburators") + stat_poly_eq(formula = genericformula,aes(label = paste(..eq.label.., ..rr.label.., sep =  "~~~")), parse = TRUE) #not great relation
+
+grid.arrange(gearplot,carbplot,nrow = 1)
 
 ```
 
@@ -121,38 +138,79 @@ plot(x = dtMTCars$hp,y = dtMTCars$vs,main = "MPG Vs Engine type")
 <!-- 4.  -->
 
 ### 3. Build model: Simple linear regression
-We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables? todo:)
+We now build a model using all variables and we check how it looks. 
 
-```{r Model,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-MultLinearModel <- lm(mpg~wt+cyl+hp,data = dtMTCars)
+understand the summary stats. 
+choose features from here.
+
+```{r AllVarModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+MultLinearModel <- lm(mpg~.,data = dtMTCars)
+summary(MultLinearModel)
+
+par(mfrow=c(2,2))
+plot(MultLinearModel)
+```
+
+**Observations:**
+Score: R2 adjusted is 80.66% which is decent.
+Assumptions are fairly satisfied. 
+However, we might not need all these variables in the model. 
+
+### 3. Build model: Simple linear regression
+We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables? : from adjusted R2 of the)
+```{r SomeVarModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+MultLinearModel <- lm(mpg~wt+cyl+disp,data = dtMTCars)
 summary(MultLinearModel)
 ```
 
-<!-- ### 3. Build model: Simple linear regression -->
-<!-- We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables? todo:) -->
-<!-- ```{r Model,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- MultLinearModel <- lm(mpg~wt+cyl+hp,data = dtMTCars) -->
-<!-- summary(MultLinearModel) -->
-<!-- ``` -->
+**Observatiions:**
+Score: R2 adjusted: 81.47% slightly better than the model with all variables. Why so? Because that model was not able to remove variables. Now we let it do that. We try stepwise linear regression. 
 
-<!-- ### 4. Build model: Stepwise linear regression -->
-<!-- ```{r StepwiseModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- LinModelStep <- step(lm(mpg~.,dtMTCars),direction = "both") -->
-<!-- summary(LinModelStep) -->
-<!-- ``` -->
+### 3. Build model: Stepwise linear regression
+```{r StepwiseModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+LinModelStep <- step(lm(mpg~.,dtMTCars),direction = "both")
+summary(LinModelStep)
+```
 
-<!-- ```{r ValidateModel,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- par(mfrow=c(2,2)) -->
-<!-- plot(LinModelStep) -->
-<!-- ``` -->
+### 4. Validate best available model
+Stepwise linear model looks the best among what we explored so far, so we check if the linear regression assumptions are validated by the model. 
 
-<!-- Observations:  -->
-<!-- 1. Residuals Vs fitted: No pattern in residuals vs fitted values.  -->
-<!-- 2. Q-Q plot: Follow the line for the most part and can be assumed to be normally distributed. -->
-<!-- 3. Variance in residuals: Fairly flat line hence variance is reasonably constant across predictor range (homoscedasticity) -->
-<!-- 4. Cooke's distance : for the 3 higher points is < 0.5.  -->
-<!-- Threshold Generally: 4/N or 4/(n - k -1) where k = number of explanatory variables & N = number of observations.  -->
-<!-- Need to check about how much cooke's distance is bad, with respect to the given problem. -->
+```{r ValidateModel,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+par(mfrow=c(2,2))
+plot(LinModelStep)
+```
+
+**Observations:**
+We now figure if linear regression assumptions are validated by the model for the data.
+Linear Regression assumptions:
+1. Linearity: 
+2. Constant error variance (homoscedasticity)
+3. Independent error terms (this is difficult to identify through simple plots, so we leave it aside for now)
+4. Normal errors
+
+1. Residuals Vs fitted: 
+  * No pattern in residuals vs fitted values. In a linear regression, sum of residuals would be 0. There would be no pattern in the error terms and the points should just be a random cloud of points => Constant variance assumption met
+  * Red line is almost horizontal (not great but not too bad) => linearity assumption met
+2. Q-Q plot: Follow the line for the most part  => normally distributed error terms assumption met
+
+Other plots that help in identifying non-linearity, non constant variance and other problematic observations, but we chill on that for now
+3. Variance in residuals: Fairly flat line hence variance is reasonably constant across predictor range (homoscedasticity)
+4. Cooke's distance : for the 3 higher points is < 0.5.
+Threshold Generally: 4/N or 4/(n - k -1) where k = number of explanatory variables & N = number of observations.
+Need to check about how much cooke's distance is bad, with respect to the given problem.
+
+Next: 
+Best Model
+Collinearity handling
+
+### 5. Summary
+We took dataset with multiple explanatory variables and one response variable of interest.
+We applied a linear model using all variables.
+ It fairly satisfied the assumptions however seemed to have too many variables in it, which might not be required.
+ We then tried the model with a few variables which seemed to have linear relation with the output variable, and the model had slightly better R2 than the model with all the variables, suggesting further that all variables are not required. 
+ We finally employed stepwise linear regression model which has the capability of removing unnecessary variables. It had sligtly better R2 than both the earlier models. 
+ We then checked if the assumptions of linearity, constant error variance, normal distribution of errors are satisfied by the final (step wise linear) model and they were fairly satisfied.
+ What is not been covered in this notebook is how to handle collinearity between features, how to find the best linear model, any pre-processing requirements for linear model. 
 
 <!-- Finally, stepwise linear regression with CV:  -->
 <!-- <!-- https://topepo.github.io/caret/train-models-by-tag.html for caret model names-->  -->
@@ -184,3 +242,8 @@ todo: understand results of cv
 understand params in cross validation folds, iterations
 formatting
 high level summary: dataset params :categorical variables numeric variables
+
+## notes to self
+1. new package for plotting equation in feature plots
+  + library: ggpmisc 
+  + function: stat_poly_eq
