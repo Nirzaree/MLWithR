@@ -10,27 +10,83 @@ output:
     toc_collapsed: true
 toc_depth: 3
 ---
-have the intuitive nondomain approach up:
-next domain + intuition approach
-domain + intuition + best practice 
-
 Goal: Understand regression concepts with examples
 
+## Rant/Why am I doing this
+
+When I would read about regression, it would on one hand seem the simplest of approaches to try out and on the other hand, the nuances in each of the steps if well understood and applied, seemed to be waaaay more effortful. Also no one reference tackled even the broad dimensions of applying regression on a dataset. Many aspects would simple be ignored (mostly because they might not be applicable to the dataset), but if you had a new dataset, how would you know if you are missing something or doing something wrong? Hence I wanted a one reference for everything related to Lin Reg. Obviously it took me waaay more than I thought it would, and it is quite long however I still think this would be my refeence for all things linear regression going forward, and hopefully it would help some others too. 
+
 ## Theory
+
 * What is regression?   
-  A technique applied to estimate a continuous output variable as a function of one or more input variables.
+  A technique applied to estimate a continuous output variable as a linear, additive function of one or more input variables.
 
 * What types of regression techniques exist? 
 
   1. Linear: $y = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$    
-      + Univariate  
-      + Multivariate  
+      + Univariate: Only 1 input variable
+      + Multivariate: More than 1 input variable
   2. Polynomial: $y = a_0 + a_1*x_1 + a_2*(x_1)^2 + a_3*(x_2) + a_4*(x_2)^2 + a_5*x_1*x_2 + \epsilon$
   3. Logistic: $log(p_i/(1-p_i)) = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$
 
-<!-- * Assumptions of linear regression -->
+* Assumptions of linear regression
+  When we apply linear regression to a dataset, we assume that:
+    1. There is a linear (& additive in case of more than 1 input variables) relationship between the inputs and the output variables
+    2. There is constant variance in the error term
+    3. The error term is normally distributed
+    4. The errors terms are independent. ** 
+    5. In case of multilinear regression, there is no collinearity between the input terms. 
 
-<!-- * Metrics for evaluaring a linear regression model -->
+* Metrics for evaluating a linear regression model
+1. Statistical significance of the model: 
+  + **p-value** : p-value is the probability that random chance generated the results or something that is equal or rare. 
+    + p-value of individual predictor variables:
+    + p-value of the entire model: 
+    + A model can be considered statistically significant only if both these p-values are < pre-determined statistical significance threshold (0.05)
+    + In r, this is visually represented by the number of stars at the end of the row. The more the stars besides the p-value of the variable, the more significant the variable. 
+  + **t-value** : t-value can be interpreted as the higher the t-value, the lower the chance that the coefficients are non-zero by chance. 
+    * Pr(>|t|) indicates the probability that you get t-value as high or higher than the one observed given null hypothesis is true. So if Pr(>|t|) is lower, then the coefficients are significant and vice versa. 
+      + $t-value = Coefficient/Standard Error$
+      + $p-value = 2 * pt(q = -abs(t-value),df = (nrow - ncol))$  
+    where pt = distribution function for the t-distribution with df degrees of freedom and q/x = vector of quantiles [3]
+    
+2. Model Accuracy:     
+  * The actual amount of information in a dataset is indicated by the amount of variance it contains. R2 tells us the amount of variance of the data that is explained by the model. [3]
+    + $R^2 = 1 - (SSE/SST)$  
+  where Sum of Squared Error or $SSE = \sum\limits_{i = 1}^{n}(y_i - \hat{y_i})^2$ &   
+        Total Sum of Squares or $SST = \sum\limits_{i = 1}^n(y_i - \bar{y})^2$ where  
+        $\hat{y_i}$ = predicted value when actual observation = $y_i$ & 
+        $\bar{y_i}$ = mean value of all output values 
+
+    [Nicely explained stepwise $R^2$ computation on a dataset](https://internal.ncl.ac.uk/ask/numeracy-maths-statistics/statistics/regression-and-correlation/coefficient-of-determination-r-squared.html)
+  
+   * Adjusted $R^2$: As you add variables to the model, the value of $R^2$ will always increase, indepdendent of if the additional variables being significant to the model or not. Hence, we use $R^2$ Adjusted.
+   
+    + Adjusted $R^2 = 1 - MSE/MST$  
+    where $MSE (Mean Squared Error) = SSE/(n - q)$ & $MST = SST/(n-1)$  
+    where $n = total number observations$ & $q = total number of coefficients$   
+    Thus Adjusted $R^2$ penalizes higher number of predictors in the model.
+    
+  * Low value of $R^2$ not always bad 
+    + Certain types of problems to always have lower $R^2$ as outputs are just harder to predict [5]
+    + However, if there are predictors which are statistically significant, then they can still be insightful. The model might not be good to do precise predictions.
+  * High value of $R^2$ not always good [5]
+  
+```{r highvalueofR2butmisleading,echo=TRUE,eval=TRUE,message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
+x = seq(1:100)
+y = x^2
+
+linModelxy <- lm(y~x)
+summary(linModelxy)
+
+plot(x = x, y = y) + abline(linModelxy)
+```
+
+**Observations**
+Always look at the $R^2$ values in conjunction with other metrics, residual plots and domain knowledge.
+
+* F-test: $R^2$ does not provide a formal hypothesis test for relationship between the predicted and the actual value if the response variable. Enter **F-test**
+    
 
 ## Intuitive Approach
 Intuitively we would do the following (with no theory knowhow on feature engineering,validation of model etc) 
@@ -64,9 +120,8 @@ A data frame with 32 observations on 11 (numeric) variables.
 [,11]	carb	Number of carburetors
 
 Task: Regression analysis of fuel efficiency
-
-Reference: https://rstudio-pubs-static.s3.amazonaws.com/157017_d791d59b482441d386ce8b31b3337ecf.html
 ```
+
 ### Intuitive approach
 ```{r setup1,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
@@ -137,11 +192,8 @@ grid.arrange(gearplot,carbplot,nrow = 1)
 <!-- 3. Transmission: Transmission type 1 (manual) overall has higher mpg than class 0 (automatic) however there is a lot of overlapping data meaning that other variables would be required for better mpg prediction along with transmission type. -->
 <!-- 4.  -->
 
-### 3. Build model: Simple linear regression
+### 3. Build model: a) Simple linear regression with all variables
 We now build a model using all variables and we check how it looks. 
-
-understand the summary stats. 
-choose features from here.
 
 ```{r AllVarModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 MultLinearModel <- lm(mpg~.,data = dtMTCars)
@@ -156,8 +208,8 @@ Score: R2 adjusted is 80.66% which is decent.
 Assumptions are fairly satisfied. 
 However, we might not need all these variables in the model. 
 
-### 3. Build model: Simple linear regression
-We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables? : from adjusted R2 of the)
+### 3. Build model: b) Simple linear regression with few handpicked variables
+We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables?: todo)
 ```{r SomeVarModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 MultLinearModel <- lm(mpg~wt+cyl+disp,data = dtMTCars)
 summary(MultLinearModel)
@@ -166,13 +218,13 @@ summary(MultLinearModel)
 **Observatiions:**
 Score: R2 adjusted: 81.47% slightly better than the model with all variables. Why so? Because that model was not able to remove variables. Now we let it do that. We try stepwise linear regression. 
 
-### 3. Build model: Stepwise linear regression
+### 3. Build model: c) Stepwise linear regression
 ```{r StepwiseModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 LinModelStep <- step(lm(mpg~.,dtMTCars),direction = "both")
 summary(LinModelStep)
 ```
 
-### 4. Validate best available model
+### 4. Validate best model
 Stepwise linear model looks the best among what we explored so far, so we check if the linear regression assumptions are validated by the model. 
 
 ```{r ValidateModel,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
@@ -194,6 +246,7 @@ Linear Regression assumptions:
 2. Q-Q plot: Follow the line for the most part  => normally distributed error terms assumption met
 
 Other plots that help in identifying non-linearity, non constant variance and other problematic observations, but we chill on that for now
+
 3. Variance in residuals: Fairly flat line hence variance is reasonably constant across predictor range (homoscedasticity)
 4. Cooke's distance : for the 3 higher points is < 0.5.
 Threshold Generally: 4/N or 4/(n - k -1) where k = number of explanatory variables & N = number of observations.
@@ -201,13 +254,13 @@ Need to check about how much cooke's distance is bad, with respect to the given 
 
 
 ### 5. Summary
-We took dataset with multiple explanatory variables and one response variable of interest.
-We applied a linear model using all variables.
- It fairly satisfied the assumptions however seemed to have too many variables in it, which might not be required.
- We then tried the model with a few variables which seemed to have linear relation with the output variable, and the model had slightly better R2 than the model with all the variables, suggesting further that all variables are not required. 
- We finally employed stepwise linear regression model which has the capability of removing unnecessary variables. It had sligtly better R2 than both the earlier models. 
- We then checked if the assumptions of linearity, constant error variance, normal distribution of errors are satisfied by the final (step wise linear) model and they were fairly satisfied.
- What is not been covered in this notebook is how to handle collinearity between features, how to find the best linear model, any pre-processing requirements for linear model. 
+
+* We took dataset with multiple explanatory variables and one response variable of interest.
+* We applied a linear model using all variables. It fairly satisfied the assumptions however seemed to have too many variables in it, which might not be required.
+* We then tried the model with a few variables which seemed to have linear relation with the output variable, and the model had slightly better R2 than the model with all the variables, suggesting further that all variables are not required. 
+* We finally employed stepwise linear regression model which has the capability of removing unnecessary variables. It had sligtly better R2 than both the earlier models. 
+* We then checked if the assumptions of linearity, constant error variance, normal distribution of errors are satisfied by the final (step wise linear) model and they were fairly satisfied.
+* What is not been covered in this notebook is how to handle collinearity between features, how to find the best linear model, any pre-processing requirements for linear model. 
 
 <!-- Finally, stepwise linear regression with CV:  -->
 <!-- <!-- https://topepo.github.io/caret/train-models-by-tag.html for caret model names-->  -->
@@ -233,14 +286,37 @@ We applied a linear model using all variables.
 <!-- # cv.lm(data = dtMTCars,mpg~.) -->
 <!-- ``` -->
 
-## Summary
-
-todo: understand results of cv
-understand params in cross validation folds, iterations
-formatting
-high level summary: dataset params :categorical variables numeric variables
+## References
+1.Fuel Efficiency Regression Analysis 
+[Regression analysis of fuel efficiency using R dataset mtcars](https://rstudio-pubs-static.s3.amazonaws.com/157017_d791d59b482441d386ce8b31b3337ecf.html)   
+2. Validating linear regression assumptions using diagnostics plots
+[Checking Linear Regression Assumptions in R | R Tutorial 5.2 | MarinStatsLectures](https://www.youtube.com/watch?v=eTZ4VUZHzxw)   
+3. Linear Regression Evaluation Metrics Nicely Explained
+[Linear Regression](http://r-statistics.co/Linear-Regression.html)  
+4. Nicely explained stepwise $R^2$ computation on a dataset 
+[Coefficient of Determination, R-squared](https://internal.ncl.ac.uk/ask/numeracy-maths-statistics/statistics/regression-and-correlation/coefficient-of-determination-r-squared.html)  
+5. Nice interpretation of $R^2$ values: [Regression Analysis: How Do I Interpret R-squared and Assess the Goodness-of-Fit?](https://blog.minitab.com/blog/adventures-in-statistics-2/regression-analysis-how-do-i-interpret-r-squared-and-assess-the-goodness-of-fit)   
 
 ## notes to self
 1. new package for plotting equation in feature plots
   + library: ggpmisc 
   + function: stat_poly_eq
+
+## ToDo / ToAnswer
+* p-value: how is it computed?
+* p-value: Why is threshold 0.05? 
+* Whats the required threshold for Pr(> |t|) for significance? 
+* Understand results of cv
+* Understand params in cross validation folds, iterations
+* How to detect and handle collinearity between features
+* Feature selection
+* How to find the best fit model 
+* Show with examples problematic models, how to detect them etc
+  + Anscombe's quartet
+* Does regularization apply in regression? 
+* Is it possible to have high $R^2$ without having any predictors that are individually statistically significant? Somewhat similar to whats happening when the MTCars data is run with a model using all variables. What do you understand about such a case? Also vice versa, strongly significant variables but still low $R^2$ value. What would that mean? 
+* To read: [Is R-squared Useless?](https://data.library.virginia.edu/is-r-squared-useless/)
+* More mind numbing metrics: F-statistic, AIC, BIC. Examples of how they save then $R^2$ misleads. When do these new metrics fail? What is the final take on metrics? 
+
+
+  
