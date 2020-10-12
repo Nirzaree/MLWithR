@@ -10,11 +10,11 @@ output:
     toc_collapsed: true
 toc_depth: 3
 ---
-Goal: Understand regression concepts with examples
+# Goal: Understand regression concepts with examples
 
 ## Rant/Why am I doing this
 
-When I would read about regression, it would on one hand seem the simplest of approaches to try out and on the other hand, the nuances in each of the steps if well understood and applied, seemed to be waaaay more effortful. Also no one reference tackled even the broad dimensions of applying regression on a dataset. Many aspects would simple be ignored (mostly because they might not be applicable to the dataset), but if you had a new dataset, how would you know if you are missing something or doing something wrong? Hence I wanted a one reference for everything related to Lin Reg. Obviously it took me waaay more than I thought it would, and it is quite long however I still think this would be my refeence for all things linear regression going forward, and hopefully it would help some others too. 
+When I would read about regression, it would on one hand seem the simplest of approaches to try out and on the other hand, there are quite a bit of nuances in each of the steps to be well understood and applied. Also no one reference tackled all the relevant concepts. Many aspects would simple be ignored (mostly because they might not be applicable to the dataset), but if you had a new dataset, how would you know if you are missing something or doing something wrong? Obviously it took me waaay more than I thought it would, and it is quite long however I still think this would be my reference for all things linear regression going forward, and hopefully it would help some others too.
 
 ## Theory
 
@@ -28,14 +28,14 @@ When I would read about regression, it would on one hand seem the simplest of ap
       + Multivariate: More than 1 input variable
   2. Polynomial: $y = a_0 + a_1*x_1 + a_2*(x_1)^2 + a_3*(x_2) + a_4*(x_2)^2 + a_5*x_1*x_2 + \epsilon$
   3. Logistic: $log(p_i/(1-p_i)) = a_0 + a_1*x_1 + a_2*x_2 + a_3*x_3 + \epsilon$
-
+  
 * Assumptions of linear regression
   When we apply linear regression to a dataset, we assume that:
     1. There is a linear (& additive in case of more than 1 input variables) relationship between the inputs and the output variables
     2. There is constant variance in the error term
     3. The error term is normally distributed
     4. The errors terms are independent. ** 
-    5. In case of multilinear regression, there is no collinearity between the input terms. 
+    5. In case of multilinear regression, there is no collinearity between the input terms.   
 
 * Metrics for evaluating a linear regression model
 1. Statistical significance of the model: 
@@ -48,10 +48,10 @@ When I would read about regression, it would on one hand seem the simplest of ap
     * Pr(>|t|) indicates the probability that you get t-value as high or higher than the one observed given null hypothesis is true. So if Pr(>|t|) is lower, then the coefficients are significant and vice versa. 
       + $t-value = Coefficient/Standard Error$
       + $p-value = 2 * pt(q = -abs(t-value),df = (nrow - ncol))$  
-    where pt = distribution function for the t-distribution with df degrees of freedom and q/x = vector of quantiles [3]
+    where pt = distribution function for the t-distribution with df degrees of freedom and q  = vector of quantiles [3]
     
 2. Model Accuracy:     
-  * The actual amount of information in a dataset is indicated by the amount of variance it contains. R2 tells us the amount of variance of the data that is explained by the model. [3]
+  * The actual amount of information in a dataset is indicated by the amount of variance it contains. $R^2$ tells us the amount of variance of the data that is explained by the model. [3]
     + $R^2 = 1 - (SSE/SST)$  
   where Sum of Squared Error or $SSE = \sum\limits_{i = 1}^{n}(y_i - \hat{y_i})^2$ &   
         Total Sum of Squares or $SST = \sum\limits_{i = 1}^n(y_i - \bar{y})^2$ where  
@@ -60,9 +60,8 @@ When I would read about regression, it would on one hand seem the simplest of ap
 
     [Nicely explained stepwise $R^2$ computation on a dataset](https://internal.ncl.ac.uk/ask/numeracy-maths-statistics/statistics/regression-and-correlation/coefficient-of-determination-r-squared.html)
   
-   * Adjusted $R^2$: As you add variables to the model, the value of $R^2$ will always increase, indepdendent of if the additional variables being significant to the model or not. Hence, we use $R^2$ Adjusted.
-   
-    + Adjusted $R^2 = 1 - MSE/MST$  
+   * Adjusted $R^2$: As you add variables to the model, the value of $R^2$ will always increase, independent of whether the additional variables are significant to the model or not. Hence, we use $R^2$ Adjusted.
+      + Adjusted $R^2 = 1 - MSE/MST$  
     where $MSE (Mean Squared Error) = SSE/(n - q)$ & $MST = SST/(n-1)$  
     where $n = total number observations$ & $q = total number of coefficients$   
     Thus Adjusted $R^2$ penalizes higher number of predictors in the model.
@@ -147,11 +146,11 @@ summary(dtMTCars)
   + Categorical variables: 2 (Engine (0 = V-shaped, 1 = straight) & Transmission (0 = automatic, 1 = manual))     
 * Response variable: mpg	Miles/(US) gallon  
 
-### 2. Feature Engineering
+### 2. Feature Exploration
 Let's plot the output variable against each of the input variables.
 We also plot best fit polynomial for each variable. 
 
-```{r featureanalysis,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
+```{r featureanalysis,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
 # corrplot(cor(dtMTCars))
 
 #some more plots
@@ -206,17 +205,38 @@ plot(MultLinearModel)
 **Observations:**
 Score: R2 adjusted is 80.66% which is decent.
 Assumptions are fairly satisfied. 
-However, we might not need all these variables in the model. 
+However, none of the variables seem to be very statistically significant, hence we need to reduce the variables and try fitting the model again.
 
 ### 3. Build model: b) Simple linear regression with few handpicked variables
-We now build a model using a few variables that seem to have a good correlation with the output variable. (how are we checking that there is not a lot of collinearity between the variables?: todo)
-```{r SomeVarModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-MultLinearModel <- lm(mpg~wt+cyl+disp,data = dtMTCars)
-summary(MultLinearModel)
+We now build a model using a few variables that we would assume would have a fairly strong correlation with mileage. (todo: how to formally check for collinearity between the variables?)
+
+* Weight: As the weight of the car increases, mileage would decrease.
+* Transmission type: Milege of Manual > Automatic.
+* Horse power: As horse power of the car increases, mileage would decrease.
+* Engine displacement: Engine displacement and horse power are quite related,so we can check which one of this helps the model better. 
+
+```{r FewHandpickedVarModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+MultLinearModel1 <- lm(mpg~wt+am+hp,data = dtMTCars)
+summary(MultLinearModel1)
+
+MultLinearModel2 <- lm(mpg~wt+am+disp,data = dtMTCars)
+summary(MultLinearModel2)
 ```
 
 **Observatiions:**
-Score: R2 adjusted: 81.47% slightly better than the model with all variables. Why so? Because that model was not able to remove variables. Now we let it do that. We try stepwise linear regression. 
+* Horse power is better for the model than engine displacement from $R^2 adjusted$ metric, hence we keep the model with engine displacement.
+* Also transmission type is not very useful in both the models, so we remove it. 
+
+```{r FinalHandpickedModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+MultLinearModelHandpicked <- lm(mpg~wt+hp,data = dtMTCars)
+summary(MultLinearModelHandpicked)
+```
+**Observations**
+* Coefficients: 
+  * Weight: MPG decreases by ~3.87 units per unit increase in weight in the given dataset.
+  * hp: MPG decreases by ~0.03 units per unit increase in weight.  
+
+* R2 adjusted: 81.48% slightly better than the model with all variables. Why so? Because that model was not able to remove variables. Now we let it do that. We try stepwise linear regression. 
 
 ### 3. Build model: c) Stepwise linear regression
 ```{r StepwiseModel,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
@@ -224,16 +244,23 @@ LinModelStep <- step(lm(mpg~.,dtMTCars),direction = "both")
 summary(LinModelStep)
 ```
 
+**Observations**
+* Features it chose: 
+  * Weight: expected & relevant
+  * type of transmission: expected and relevant
+  * qsec: time taken (in seconds) by the car to cover quarter mile. In some ways related to the car power, the more the power, the lesser the time taken, the lesser the mileage. So this feature is directly proportional to the mpg, however the feature plot of qsec vs mpg alone does not look very good. 
+  
+Since the $R^2$ between the handpicked model and the step model does not differ a lot, we can keep the handpicked model as the final candidate, however any of the two models should be fine.    
+
 ### 4. Validate best model
-Stepwise linear model looks the best among what we explored so far, so we check if the linear regression assumptions are validated by the model. 
+We now check if linear regression assumptions are validated by the final model that we chose.  
 
 ```{r ValidateModel,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 par(mfrow=c(2,2))
-plot(LinModelStep)
+plot(MultLinearModel)
 ```
 
 **Observations:**
-We now figure if linear regression assumptions are validated by the model for the data.
 Linear Regression assumptions:
 1. Linearity: 
 2. Constant error variance (homoscedasticity)
@@ -245,7 +272,7 @@ Linear Regression assumptions:
   * Red line is almost horizontal (not great but not too bad) => linearity assumption met
 2. Q-Q plot: Follow the line for the most part  => normally distributed error terms assumption met
 
-Other plots that help in identifying non-linearity, non constant variance and other problematic observations, but we chill on that for now
+Other plots that help in identifying non-linearity, non constant variance and other problematic observations, but we chill on that for now.
 
 3. Variance in residuals: Fairly flat line hence variance is reasonably constant across predictor range (homoscedasticity)
 4. Cooke's distance : for the 3 higher points is < 0.5.
@@ -263,7 +290,7 @@ Need to check about how much cooke's distance is bad, with respect to the given 
 * What is not been covered in this notebook is how to handle collinearity between features, how to find the best linear model, any pre-processing requirements for linear model. 
 
 <!-- Finally, stepwise linear regression with CV:  -->
-<!-- <!-- https://topepo.github.io/caret/train-models-by-tag.html for caret model names-->  -->
+<!-- <!-- https://topepo.github.io/caret/train-models-by-tag.html for caret model names--> 
 
 <!-- ### 5. Build model: Stepwise linear regression with cross validation -->
 <!-- ```{r WithCV,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
