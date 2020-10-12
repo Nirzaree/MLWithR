@@ -37,6 +37,9 @@ When I would read about regression, it would on one hand seem the simplest of ap
     4. The errors terms are independent. ** 
     5. In case of multilinear regression, there is no collinearity between the input terms.   
 
+* Preprocessing for linear regression
+* Feature Engineering for linear regression
+* Tuning a regression model
 * Metrics for evaluating a linear regression model
 1. Statistical significance of the model: 
   + **p-value** : p-value is the probability that random chance generated the results or something that is equal or rare. 
@@ -249,7 +252,6 @@ summary(LinModelStep)
   * Weight: expected & relevant
   * type of transmission: expected and relevant
   * qsec: time taken (in seconds) by the car to cover quarter mile. In some ways related to the car power, the more the power, the lesser the time taken, the lesser the mileage. So this feature is directly proportional to the mpg, however the feature plot of qsec vs mpg alone does not look very good. 
-  
 Since the $R^2$ between the handpicked model and the step model does not differ a lot, we can keep the handpicked model as the final candidate, however any of the two models should be fine.    
 
 ### 4. Validate best model
@@ -344,6 +346,14 @@ Need to check about how much cooke's distance is bad, with respect to the given 
 * Is it possible to have high $R^2$ without having any predictors that are individually statistically significant? Somewhat similar to whats happening when the MTCars data is run with a model using all variables. What do you understand about such a case? Also vice versa, strongly significant variables but still low $R^2$ value. What would that mean? 
 * To read: [Is R-squared Useless?](https://data.library.virginia.edu/is-r-squared-useless/)
 * More mind numbing metrics: F-statistic, AIC, BIC. Examples of how they save then $R^2$ misleads. When do these new metrics fail? What is the final take on metrics? 
+* F1 score
+* AIC
+* glm 
+* Other regression techniques
+  * ridge
+  * lasso
+  * elastic net
+* Quick rundown on 2-3 more datasets  
 
 
   

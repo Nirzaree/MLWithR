@@ -2,62 +2,74 @@
 title: "Classification"
 author: "Nirzaree"
 date: "09/07/2020"
-output: html_document
+output:
+  html_document:
+    fig_caption: true
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+toc_depth: 3
 ---
 
-recap
-load data
-plot
-split into train test
-apply different models
-linear classifier
-LDA
-decision trees (rpart)
-knn
-svmradial
-random forest
-plot results 
-predict on best model 
+## Goal: Understand classification concepts with examples
 
-functions used: 
-1. plotting: featurePlot
-2. split train test: createDataPartition
-3. fitting models: train 
-4. viewing 
-3. predicting: predict
+## Theory
 
-config in train: 
-train(trainingdata, traininglabels,method, metric, control)
-method = "vglmAdjCat":linear classifier, "rpart" : decision trees,"knn","lda","svmRadial","rf"
-metric = "accuracy"
-control = trainControl(method = "cv", number = 10)
+* What is classification? 
+  A technique applied to estimate categorical output variable
+* What types of classification techniques exist? 
+  + Binary
+  + Multiclass
+* Classification algorithms
+  + Decision Trees
+  + LDA
+  + Random forest
+  + SVM
+  + kNN
+  + Naive Bayes
+* Assumptions of classification
+  None that I can think of 
+* Preprocessing for classification
+* Feature Engineering for classification
+* Tuning a classification model
+* Metrics for evaluating a classification model
+  + Binary Classifier: 
+    + Confusion matrix
+    + AUC-ROC Curve
+    + Precision, Recall
+    + Sensitivity, Specificity
 
-Q: 
-Classification models : 
-Why are they useful here? 
+## Approach
 
-What do we check to make sure its not misleading? 
-How do we choose the validation metric here? 
-
-## Datasets {.tabset}
+We now look at a couple of datasets
 
 ### Iris
 
-```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```
+Dataset description: Edgar Anderson's Iris Data
+
+This famous (Fisher's or Anderson's) iris data set gives the measurements in centimeters of the variables sepal length and width and petal length and width, respectively, for 50 flowers from each of 3 species of iris. The species are Iris setosa, versicolor, and virginica.
+
+iris is a data frame with 150 cases (rows) and 5 variables (columns) named Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, and Species.
+```
+
+```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
 library(caret)
 ```
 
-```{r loadDataSet,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+### 1. Load Data
+```{r loaddata1,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 #iris is already loaded
 data(iris)
 ```
 
-```{r basicSummary,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r basicSummary,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 summary(iris)
 ```
 
-```{r basicPlots,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+### 2. Feature Exploration
+```{r basicPlots,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 featurePlot(iris[,1:4],iris[,5],"pairs")
 
 featurePlot(iris[,1:4],iris[,5],"box")
@@ -66,32 +78,36 @@ featurePlot(iris[,1:4],iris[,5],"box")
 
 featurePlot(iris[,1:4],iris[,5],"density")
 ```
-**Observation**: Petal Width & Length are good features. Sepal length okayish and sepal width very good. 
+**Observation**: Petal Width & Length are good features. Sepal length okayish and sepal width not good. 
 
+### 3. Build model: a) Train-test split
 ```{r Classifiermodel_splitData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-
 #split data into test train 
 trainingIndex <- createDataPartition(iris[,5],p = 0.8,list = FALSE)
 
 dtTrain <- iris[trainingIndex,]
 dtTest <- iris[-trainingIndex,]
-
 ```
-
+### 3. Build model: b) Training config:
+                        method = 10 fold cross validation (todo: how many repeats?)
+                        metric = accuracy
 ```{r Classifiermodel_config,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-control <- trainControl(method = "cv",number = 10)
+control <- trainControl(method = "cv",
+                        number = 10)
 metric <- "accuracy"
 ```
 
-Models to be tried out:
+### 3. Build model: c) Build multiple models
 1. Linear Classifier
 2. LDA
-3. CART
-4 kNN
+3. CART (Decision tree)
+4. kNN
 5. SVM
 6. RF
+7. Naive Bayes
 
-```{r Classifiermodel_tryModels,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+We try these classification models using caret package's train function
+```{r Classifiermodel_tryModels,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 #1. Linear Model
 set.seed(3)
 fit.linClassifier <- train(dtTrain[,1:4],
@@ -134,185 +150,394 @@ fit.rf <- train(dtTrain[,1:4],
                  method = "rf",
                  metric = metric,
                  trControl = control)
+
+set.seed(3)
+fit.NB <- train(dtTrain[,1:4],
+                dtTrain[,5],
+                method = "nb",
+                metric = metric,
+                trControl = control)
 ```
 
-```{r CheckModelAccuracy,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+### 4. Identify best model
+```{r CheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 ClassificationResults <- resamples(list(LinClassifier = fit.linClassifier,
                                         LDA = fit.lda,
                                         CART = fit.cart,
                                         knn = fit.knn,
                                         SVM = fit.svm,
-                                        RF = fit.rf))
-
+                                        RF = fit.rf,
+                                        NB = fit.NB))
 summary(ClassificationResults)
 dotplot(ClassificationResults)
 ```
+**Observation:** Linear classifier has the highest accuracy overall.
 
 ```{r InvestigateTheWinningModel,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-print(fit.lda)
-
+print(fit.linClassifier)
+print(fit.linClassifier$finalModel)
+varImp(fit.linClassifier)
 ```
-
-```{r predictOnValidationSet,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+**Observation:** Variable importance in the model is matching our intuition from feature plots. 
+### 5. Predict
+```{r predictOnValidationSet,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 dtTest <- data.table(dtTest)
-dtTest[,predictedClass := predict(fit.lda,newdata =  dtTest)]
+dtTest[,predictedClass := predict(fit.linClassifier,newdata =  dtTest)]
 
 confusionMatrix(dtTest[,predictedClass],dtTest[,Species])
 ```
 
 **Summary:**
+* This is a beautiful dataset with respect to:
+1. Completely balanced classes
+2. All features having the same range and units
+which eliminates a lot of preprocessing. 
+* We tried a few classification models on the dataset after splitting the dataset into an 80:20 train:test split.
+* Linear Classifier had the highest accuracy among all the other models, hence we used it to make predictions on the remaining 20% data.
+* Prediction accuracy on the remaining 20% data is ~97% (only 1 sample misclassified)
+* Variable importance in each of the models is reflecting what appears from feature plots of the features. Petal Width & Length being important features followed by sepal length followed by sepal width.
 
-### knn-BreastCancenWisconsin
-tutorial url: ml-tutorials.kyrcha.#info/knn.html
-```{r setupknnbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-library(class)
+<!-- ### knn-BreastCancenWisconsin -->
+<!-- tutorial url: ml-tutorials.kyrcha.#info/knn.html -->
+<!-- ```{r setupknnbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- library(class) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r loadDatabreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- fileURL <- "http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data" -->
+
+<!-- dtData <- data.table(read.csv(fileURL,header = FALSE)) -->
+<!-- str(dtData) -->
+<!-- ``` -->
+
+<!-- ```{r PreProcessbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- #first column is id column which is not required -->
+<!-- dtData <- dtData[,-1] -->
+
+<!-- #put names in the columns -->
+<!-- names(dtData) <- c("ClumpThickness", -->
+<!-- "UniformityCellSize", -->
+<!-- "UniformityCellShape", -->
+<!-- "MarginalAdhesion", -->
+<!-- "SingleEpithelialCellSize", -->
+<!-- "BareNuclei", -->
+<!-- "BlandChromatin", -->
+<!-- "NormalNucleoli", -->
+<!-- "Mitoses", -->
+<!-- "Class") -->
+
+<!-- #V7 is char. because ? whenever missing data.  -->
+<!-- dtData[,BareNuclei := ifelse(BareNuclei == "?",NA,BareNuclei)] -->
+<!-- dtData[,BareNuclei := as.integer(BareNuclei)] -->
+<!-- str(dtData) -->
+
+<!-- #make output categorical -->
+<!-- dtData[,Class := factor(Class,levels = c(2,4),labels = c("benign","malignant"))] -->
+
+<!-- print(summary(dtData)) -->
+
+<!-- #check how balanced is the dataset -->
+<!-- print(summary(dtData$Class)) -->
+
+<!-- ``` -->
+
+<!-- Note: Since range of all feature columns are same,we can probably get away with standardizing input data.  -->
+
+<!-- ```{r TrainTestSplitbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- trainingIndices <- sample(seq(1:nrow(dtData)),0.7*nrow(dtData)) -->
+<!-- dtTrain <- dtData[trainingIndices,] -->
+<!-- dtTrain <- dtTrain[complete.cases(dtTrain),] -->
+<!-- dtTrainX <- dtTrain[,1:9] -->
+<!-- dtTrainY <- dtTrain$Class #dtTrain[,10]  this doesnt work because labels have to be a vector. -->
+<!-- dtValidation <- dtData[-trainingIndices,] -->
+<!-- dtValidation <- dtValidation[complete.cases(dtValidation),] -->
+<!-- dtValidationX <- dtValidation[,1:9] -->
+<!-- dtValidationY <- dtValidation$Class  #dtValidation[,10] same as above -->
+<!-- ``` -->
+
+<!-- ```{r Modelbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- Predictions <- knn(train = dtTrainX,test = dtValidationX,cl = dtTrainY,k = 1) -->
+<!-- ``` -->
+
+<!-- ```{r Validatebreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- dtConfusionMatrix <- table(Predictions,dtValidationY) -->
+
+<!-- #how to choose the positive class ?  -->
+<!-- #class imbalance?  -->
+<!-- #Accuracy -->
+<!-- Accuracy = sum(Predictions == dtValidationY)/length(dtValidationY) -->
+
+<!-- #Precision -->
+<!-- Precision = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[2,1]) -->
+
+<!-- #Recall -->
+<!-- Recall = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[1,2]) -->
+<!-- #F1 score -->
+
+<!-- ``` -->
+
+<!-- ```{r CrossValidation,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- PredictionsknnCV <- knn.cv(train = dtTrainX,cl = dtTrainY,k = 1) -->
+
+<!-- table(PredictionsknnCV,dtTrainY) -->
+
+<!-- sum(PredictionsknnCV == dtTrainY)/length(dtTrainY) -->
+<!-- ``` -->
+
+<!-- https://courses.cognitiveclass.ai/courses/course-v1:BigDataUniversity+ML0151EN+2017/courseware/76d637cbe8024e509dc445df847e6c3a/d2529e01786a412fb009daef4b002a48/1?activate_block_id=block-v1%3ABigDataUniversity%2BML0151EN%2B2017%2Btype%40vertical%2Bblock%40356f36b091764fa9a43ccb737e586563 -->
+
+<!-- New function alert: expand.grid :  -->
+
+<!-- ```{r ChoosekValue,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- # modelControl <- trainControl(method = "cv", -->
+<!--                              # number = 10) -->
+
+<!-- modelControl <- trainControl(method = "repeatedcv", -->
+<!--                              number = 5, -->
+<!--                              repeats = 2) -->
+<!-- knngrid <- expand.grid(k = c(1,3,5,7,9)) -->
+
+<!-- knn_k_search <- train(Class~., -->
+<!--                       data = dtTrain, -->
+<!--                       method = "knn", -->
+<!--                       trControl = modelControl, -->
+<!--                       preProcess = c("center","scale"),#doing this is changing the results between this and default knn. -->
+<!--                       tuneGrid = knngrid) -->
+
+<!-- knn_k_search -->
+<!-- ``` -->
+
+<!-- ```{r defaultknncaretfit,} -->
+
+<!-- control <- trainControl(method = "cv",number = 10) -->
+<!-- metric <- "accuracy" -->
+<!-- defaultknn <- train(Class~., -->
+<!--                  data = dtTrain, -->
+<!--                  method = "knn", -->
+<!--                  metric = metric, -->
+<!--                  trControl = control) -->
+
+<!-- summary(defaultknn) -->
+<!-- ``` -->
+
+<!-- Not a lot of changes with k values. What does that tell abotu the dataset?  -->
+
+<!-- Cross validation : caret easy settings -->
+<!-- optimal k value : caret does it -->
+<!-- Validation metrics : depends on the dataset I guess -->
+
+<!-- Summary:  -->
+<!-- knn : -->
+<!-- caret or class -->
+<!-- in class u specify k value -->
+<!-- check if overfitting by doing confusion matrix -->
+
+<!-- choosing k value  -->
+<!-- all in train function in caret -->
+<!-- metric -->
+<!-- method -->
+<!-- training control  -->
+<!-- preprocess -->
+
+<!-- Preprocess: center, scale, pca.  -->
+
+### Titanic
+
+```
+Dataset description: Survival of passengers on the Titanic
+
+This data set provides information on the fate of passengers on the fatal maiden voyage of the ocean liner ‘Titanic’, summarized according to economic status (class), sex, age and survival.
+
+Format
+A 4-dimensional array resulting from cross-tabulating 2201 observations on 4 variables. The variables and their levels are as follows:
+
+No	Name	Levels
+1	Class	1st, 2nd, 3rd, Crew
+2	Sex	Male, Female
+3	Age	Child, Adult
+4	Survived	No, Yes
+
+Task: Binary classification
+```
+
+```{r loadData2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(rattle)
+
+summary(Titanic)
+head(Titanic)
 
 ```
 
-
-```{r loadDatabreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-fileURL <- "http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
-
-dtData <- data.table(read.csv(fileURL,header = FALSE))
-str(dtData)
-```
-
-```{r PreProcessbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-#first column is id column which is not required
-dtData <- dtData[,-1]
-
-#put names in the columns
-names(dtData) <- c("ClumpThickness",
-"UniformityCellSize",
-"UniformityCellShape",
-"MarginalAdhesion",
-"SingleEpithelialCellSize",
-"BareNuclei",
-"BlandChromatin",
-"NormalNucleoli",
-"Mitoses",
-"Class")
-
-#V7 is char. because ? whenever missing data. 
-dtData[,BareNuclei := ifelse(BareNuclei == "?",NA,BareNuclei)]
-dtData[,BareNuclei := as.integer(BareNuclei)]
-str(dtData)
-
-#make output categorical
-dtData[,Class := factor(Class,levels = c(2,4),labels = c("benign","malignant"))]
-
-print(summary(dtData))
-
-#check how balanced is the dataset
-print(summary(dtData$Class))
+```{r featureanalysis,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
 
 ```
 
-Note: Since range of all feature columns are same,we can probably get away with standardizing input data. 
+```{r preprocessing,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
+temp <- data.table(Titanic)
+dtTitanic <- temp[as.numeric(rep(row.names(temp),temp$N)),] #0 frequency rows are gone now. 
+dtTitanic[,N := NULL]
 
-```{r TrainTestSplitbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-trainingIndices <- sample(seq(1:nrow(dtData)),0.7*nrow(dtData))
-dtTrain <- dtData[trainingIndices,]
-dtTrain <- dtTrain[complete.cases(dtTrain),]
-dtTrainX <- dtTrain[,1:9]
-dtTrainY <- dtTrain$Class #dtTrain[,10]  this doesnt work because labels have to be a vector.
-dtValidation <- dtData[-trainingIndices,]
-dtValidation <- dtValidation[complete.cases(dtValidation),]
-dtValidationX <- dtValidation[,1:9]
-dtValidationY <- dtValidation$Class  #dtValidation[,10] same as above
+#convert categorical variables into factors 
+dtTitanic[,Class := as.factor(Class)] 
+dtTitanic[,Sex := as.factor(Sex)]
+dtTitanic[,Survived := as.factor(Survived)]
+
+summary(dtTitanic$Survived)
 ```
 
-```{r Modelbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-Predictions <- knn(train = dtTrainX,test = dtValidationX,cl = dtTrainY,k = 1)
+### 3. Build model: a) Train-test split
+```{r Classifiermodel_splitData2,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+
+#split data into test train 
+trainingIndex <- sample(seq(1:nrow(dtTitanic)),0.8*nrow(dtTitanic))
+
+dtTitanicTrain <- dtTitanic[trainingIndex,]
+dtTitanicTest <- dtTitanic[-trainingIndex,]
 ```
 
-```{r Validatebreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-dtConfusionMatrix <- table(Predictions,dtValidationY)
-
-#how to choose the positive class ? 
-#class imbalance? 
-#Accuracy
-Accuracy = sum(Predictions == dtValidationY)/length(dtValidationY)
-
-#Precision
-Precision = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[2,1])
-
-#Recall
-Recall = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[1,2])
-#F1 score
-
-```
-
-
-```{r CrossValidation,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-PredictionsknnCV <- knn.cv(train = dtTrainX,cl = dtTrainY,k = 1)
-
-table(PredictionsknnCV,dtTrainY)
-
-sum(PredictionsknnCV == dtTrainY)/length(dtTrainY)
-```
-
-https://courses.cognitiveclass.ai/courses/course-v1:BigDataUniversity+ML0151EN+2017/courseware/76d637cbe8024e509dc445df847e6c3a/d2529e01786a412fb009daef4b002a48/1?activate_block_id=block-v1%3ABigDataUniversity%2BML0151EN%2B2017%2Btype%40vertical%2Bblock%40356f36b091764fa9a43ccb737e586563
-
-New function alert: expand.grid : 
-
-```{r ChoosekValue,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-# modelControl <- trainControl(method = "cv",
-                             # number = 10)
-
-modelControl <- trainControl(method = "repeatedcv",
-                             number = 5,
-                             repeats = 2)
-knngrid <- expand.grid(k = c(1,3,5,7,9))
-
-knn_k_search <- train(Class~.,
-                      data = dtTrain,
-                      method = "knn",
-                      trControl = modelControl,
-                      preProcess = c("center","scale"),#doing this is changing the results between this and default knn.
-                      tuneGrid = knngrid)
-
-knn_k_search
-```
-
-```{r defaultknncaretfit,}
-
-control <- trainControl(method = "cv",number = 10)
+### 3. Build model: b) Training config:
+                        method = 10 fold cross validation (todo: how many repeats?)
+                        metric = accuracy
+```{r Classifiermodel_config2,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+control <- trainControl(method = "cv",
+                        number = 10)
 metric <- "accuracy"
-defaultknn <- train(Class~.,
-                 data = dtTrain,
-                 method = "knn",
-                 metric = metric,
-                 trControl = control)
-
-summary(defaultknn)
 ```
 
-Not a lot of changes with k values. What does that tell abotu the dataset? 
+### 3. Build model:
+Distance based models are out: 
+```{r TitanicModel1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+"))
+Titanic.cart <- train(Survived~Class+Sex+Age,
+                      data = dtTitanicTrain,
+                      method = "rpart",
+                      trControl = control,
+                      metric = metric)
 
+fancyRpartPlot(Titanic.cart$finalModel)
 
-Cross validation : caret easy settings
-optimal k value : caret does it
-Validation metrics : depends on the dataset I guess
+(Titanic.cart)
+```
+**Observation:** Accuracy of the tree: ~78% 
+Let's see if we can improve this by tuning the tree a little
 
-Summary: 
-knn :
-caret or class
-in class u specify k value
-check if overfitting by doing confusion matrix
+```{r TitanicTuneModel1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+"))
 
-choosing k value 
-all in train function in caret
-metric
-method
-training control 
-preprocess
+Titanic.tunedcart <- rpart(lFormula,
+                           data = dtTitanicTrain)
 
-Preprocess: center, scale, pca. 
+summary(Titanic.tunedcart)
 
-Validate: using accuracy,precision,recall etc
+rpart.plot(Titanic.tunedcart)
+```
+
+```{r Titanicpredict1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtTitanicTest[,"predrpart"] <- predict(Titanic.tunedcart,dtTitanicTest,type = "class")
+
+confusionMatrix(dtTitanicTest[,predrpart],dtTitanicTest[,Survived])
+```
+
+```{r TitanicVariousClsasificationModels,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+set.seed(5)
+Titanic.knn <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "knn",
+                     trControl = control,
+                     metric = metric)
+set.seed(5)
+Titanic.rf <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "rf",
+                     trControl = control,
+                     metric = metric)
+set.seed(5)
+Titanic.lda <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "lda",
+                     trControl = control,
+                     metric = metric)
+set.seed(5)
+Titanic.nb <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "nb",
+                     trControl = control,
+                     metric = metric)
+set.seed(5)
+Titanic.linClassifier <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "vglmAdjCat",
+                     trControl = control,
+                     metric = metric)
+set.seed(5)
+Titanic.svm <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "svmRadial",
+                     trControl = control,
+                     metric = metric)
+
+set.seed(5)
+Titanic.logReg <- train(Survived~Class+Sex+Age,
+                     data = dtTitanicTrain,
+                     method = "glm",
+                     family = "binomial",
+                     trControl = control,
+                     metric = metric)
+```
+
+### 4. Identify best model
+
+```{r TitanicCheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+TitanicMultipleModels <- resamples(list(Titaniccart = Titanic.cart,
+                                        Titanicknn = Titanic.knn,
+                                        Titanicrf = Titanic.rf,
+                                        TitanicLDA = Titanic.lda,
+                                        TitanicNB = Titanic.nb,
+                                        TitanicLinClassifier = Titanic.linClassifier,
+                                        TitanicSVM = Titanic.svm,
+                                        TitanicLogReg = Titanic.logReg
+                                        ))
+
+summary(TitanicMultipleModels)
+
+dotplot(TitanicMultipleModels)
+```
+
+```{r TitanicTuneModel2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+"))
+
+Titanic.tunedcart2 <- rpart(lFormula,
+                           data = dtTitanicTrain,
+                           control = rpart.control(minsplit = 10,
+                                                   maxdepth = 5,
+                                                   cp = 0.005))
+
+summary(Titanic.tunedcart2)
+
+rpart.plot(Titanic.tunedcart2)
+```
+
+```{r Titanicpredict2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtTitanicTest[,"predrpart2"] <- predict(Titanic.tunedcart,dtTitanicTest,type = "class")
+
+confusionMatrix(dtTitanicTest[,predrpart],dtTitanicTest[,Survived])
+```
+
+## ToDo / ToAnswer
+
+1. rpart vs caret - rpart
+2. resamples ran on titanic without setting the seed for each models. Why? [Titanic]
+
+Validate: using accuracy, precision, recall etc
 Handle imbalance in class: ? Dont know really But can still chck if model is performing 
 
-how to tell the model abouot the positive class. 
+how to tell the model about the positive class. 
+
+## notes to self
+1. Important function: resamples : Collation and Visualization of Resampling Results
+   resamples checks that the resampling results match; that is, the indices in the object trainObject$control$index are the same. Also, the argument trainControl returnResamp should have a value of "final" for each model. 
+The summary function computes summary statistics across each model/metric combination. [https://www.rdocumentation.org/packages/caret/versions/6.0-86/topics/resamples](https://www.rdocumentation.org/packages/caret/versions/6.0-86/topics/resamples)        
 
 

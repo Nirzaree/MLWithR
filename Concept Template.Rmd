@@ -1,0 +1,41 @@
+---
+title: "Concept Template"
+author: "Nirzaree"
+date: "12/10/2020"
+output: 
+  html_document:
+    fig_caption: true
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+toc_depth: 3
+---
+# Goal: Understand classification concepts with examples
+
+## Theory
+
+* What is the concept? 
+* Techniques within the concept
+* Algos within the concept
+* Assumptions of the concept
+* Preprocessing for classification
+* Feature Engineering
+* Tuning
+* Metrics for evaluating
+
+## Approach
+1.
+2.
+3.
+4.
+5.
+
+## Dataset 1
+
+```{r setup1,echo = FALSE, message = FALSE, warning = FALSE}
+
+```
+
+## ToDo / ToAnswer
+
+## notes to self
