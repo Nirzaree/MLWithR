@@ -20,12 +20,12 @@ toc_depth: 3
 * What types of classification techniques exist? 
   + Binary
   + Multiclass
-* Classification algorithms
+* (A few) Classification algorithms
   + Decision Trees
-  + LDA
+  + Linear Discriminant Analysis (LDA)
   + Random forest
-  + SVM
-  + kNN
+  + Support Vector Machine (SVM)
+  + k-nearest neighbors (kNN)
   + Naive Bayes
 * Assumptions of classification
   None that I can think of 
@@ -38,12 +38,11 @@ toc_depth: 3
     + AUC-ROC Curve
     + Precision, Recall
     + Sensitivity, Specificity
-
-## Approach
-
+  + Multiclass Classifier:
+  
 We now look at a couple of datasets
 
-### Iris
+## Iris
 
 ```
 Dataset description: Edgar Anderson's Iris Data
@@ -51,6 +50,8 @@ Dataset description: Edgar Anderson's Iris Data
 This famous (Fisher's or Anderson's) iris data set gives the measurements in centimeters of the variables sepal length and width and petal length and width, respectively, for 50 flowers from each of 3 species of iris. The species are Iris setosa, versicolor, and virginica.
 
 iris is a data frame with 150 cases (rows) and 5 variables (columns) named Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, and Species.
+
+Task: Classification of iris species from the sepal & petal length and width features.
 ```
 
 ```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
@@ -69,6 +70,11 @@ summary(iris)
 ```
 
 ### 2. Feature Exploration
+A couple of different ways of feature plots: 
+i) pair plot
+ii) box plot
+iii) density plot
+ 
 ```{r basicPlots,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 featurePlot(iris[,1:4],iris[,5],"pairs")
 
@@ -81,17 +87,18 @@ featurePlot(iris[,1:4],iris[,5],"density")
 **Observation**: Petal Width & Length are good features. Sepal length okayish and sepal width not good. 
 
 ### 3. Build model: a) Train-test split
-```{r Classifiermodel_splitData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r Classifiermodel_splitData,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 #split data into test train 
 trainingIndex <- createDataPartition(iris[,5],p = 0.8,list = FALSE)
 
 dtTrain <- iris[trainingIndex,]
 dtTest <- iris[-trainingIndex,]
 ```
+
 ### 3. Build model: b) Training config:
                         method = 10 fold cross validation (todo: how many repeats?)
                         metric = accuracy
-```{r Classifiermodel_config,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+```{r Classifiermodel_config,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 control <- trainControl(method = "cv",
                         number = 10)
 metric <- "accuracy"
@@ -108,94 +115,59 @@ metric <- "accuracy"
 
 We try these classification models using caret package's train function
 ```{r Classifiermodel_tryModels,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-#1. Linear Model
-set.seed(3)
-fit.linClassifier <- train(dtTrain[,1:4],
-                           dtTrain[,5],
-                           method = "vglmAdjCat",
-                           metric = metric,
-                           trControl = control)
-
-set.seed(3)
-fit.lda <- train(dtTrain[,1:4],
-                 dtTrain[,5],
-                 method = "lda",
-                 metric = metric,
-                 trControl = control)
-
-set.seed(3)
-fit.cart <- train(dtTrain[,1:4],
-                 dtTrain[,5],
-                 method = "rpart",
-                 metric = metric,
-                 trControl = control)
-
-set.seed(3)
-fit.knn <- train(dtTrain[,1:4],
-                 dtTrain[,5],
-                 method = "knn",
-                 metric = metric,
-                 trControl = control)
-
-set.seed(3)
-fit.svm <- train(dtTrain[,1:4],
-                 dtTrain[,5],
-                 method = "svmRadial",
-                 metric = metric,
-                 trControl = control)
-
-set.seed(3)
-fit.rf <- train(dtTrain[,1:4],
-                 dtTrain[,5],
-                 method = "rf",
-                 metric = metric,
-                 trControl = control)
-
-set.seed(3)
-fit.NB <- train(dtTrain[,1:4],
-                dtTrain[,5],
-                method = "nb",
-                metric = metric,
-                trControl = control)
+AllModels <- fMultipleClassificationModels(TrainingData = dtTrain[,1:4],
+                              TrainingLabels = dtTrain[,5],
+                              TrainingControl = control,
+                              EvalMetric = metric,
+                              TrainingModels =  c("vglmAdjCat","lda","rpart","knn","svmRadial","rf","nb")
+                              )
 ```
 
-### 4. Identify best model
+### 4. Identify the best model
 ```{r CheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-ClassificationResults <- resamples(list(LinClassifier = fit.linClassifier,
-                                        LDA = fit.lda,
-                                        CART = fit.cart,
-                                        knn = fit.knn,
-                                        SVM = fit.svm,
-                                        RF = fit.rf,
-                                        NB = fit.NB))
+ClassificationResults <- resamples(list(LinClassifier = AllModels[[1]],
+                                        LDA = AllModels[[2]],
+                                        CART = AllModels[[3]],
+                                        knn = AllModels[[4]],
+                                        SVM = AllModels[[5]],
+                                        RF = AllModels[[6]],
+                                        NB = AllModels[[7]]))
 summary(ClassificationResults)
 dotplot(ClassificationResults)
 ```
 **Observation:** Linear classifier has the highest accuracy overall.
 
-```{r InvestigateTheWinningModel,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+### 5. Investigate the best model
+```{r InvestigateTheWinningModel,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+fit.linClassifier = AllModels[[1]]
 print(fit.linClassifier)
 print(fit.linClassifier$finalModel)
 varImp(fit.linClassifier)
 ```
 **Observation:** Variable importance in the model is matching our intuition from feature plots. 
-### 5. Predict
-```{r predictOnValidationSet,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+### 5. Predict on test data
+```{r predictOnValidationSet,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 dtTest <- data.table(dtTest)
 dtTest[,predictedClass := predict(fit.linClassifier,newdata =  dtTest)]
 
 confusionMatrix(dtTest[,predictedClass],dtTest[,Species])
 ```
+**Observation:**
+* 1 sample of virginica is being classified as versicolor by the model which results in reduced sensitivity towards the virginica class and slightly reduced specificity of the versicolor class.
+* Balanced Accuracy of each of the classes are: Setosa (1), Versicolor (0.975), Virginica (0.95)
+* Overall accuracy of the model is : 29/30 = 0.9667
 
 **Summary:**
 * This is a beautiful dataset with respect to:
-1. Completely balanced classes
-2. All features having the same range and units
+  1. Having completely balanced classes
+  2. All features having the same range and units
 which eliminates a lot of preprocessing. 
-* We tried a few classification models on the dataset after splitting the dataset into an 80:20 train:test split.
+* We tried a few classification models on the dataset after splitting the dataset into an 80:20 train:test split with 10 fold cross validation.
 * Linear Classifier had the highest accuracy among all the other models, hence we used it to make predictions on the remaining 20% data.
 * Prediction accuracy on the remaining 20% data is ~97% (only 1 sample misclassified)
-* Variable importance in each of the models is reflecting what appears from feature plots of the features. Petal Width & Length being important features followed by sepal length followed by sepal width.
+* Variable importance in each of the models is reflecting what appears from feature plots of the features. We looked at the variable importance on the linear classifier model. Petal Width & Length being important features followed by sepal length followed by sepal width.
+
+We now look at another dataset
 
 <!-- ### knn-BreastCancenWisconsin -->
 <!-- tutorial url: ml-tutorials.kyrcha.#info/knn.html -->
@@ -343,7 +315,7 @@ which eliminates a lot of preprocessing.
 
 <!-- Preprocess: center, scale, pca.  -->
 
-### Titanic
+## Titanic
 
 ```
 Dataset description: Survival of passengers on the Titanic
@@ -364,6 +336,9 @@ Task: Binary classification
 
 ```{r loadData2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(rattle)
+library(rpart)
+library(rpart.plot)
+library(party)
 
 summary(Titanic)
 head(Titanic)
@@ -383,7 +358,7 @@ dtTitanic[,N := NULL]
 dtTitanic[,Class := as.factor(Class)] 
 dtTitanic[,Sex := as.factor(Sex)]
 dtTitanic[,Survived := as.factor(Survived)]
-
+dtTitanic[,Age := as.factor(Age)]
 summary(dtTitanic$Survived)
 ```
 
@@ -419,6 +394,16 @@ Titanic.cart <- train(Survived~Class+Sex+Age,
 fancyRpartPlot(Titanic.cart$finalModel)
 
 (Titanic.cart)
+
+#conditional tree
+Titanic.ctree <- ctree(Survived~Class+Sex+Age,
+                      data = dtTitanicTrain)
+
+plot(Titanic.ctree)
+
+predCtree <- predict(Titanic.ctree,dtTitanicTest)
+
+confusionMatrix(predCtree,dtTitanicTest$Survived)
 ```
 **Observation:** Accuracy of the tree: ~78% 
 Let's see if we can improve this by tuning the tree a little
@@ -505,30 +490,50 @@ summary(TitanicMultipleModels)
 dotplot(TitanicMultipleModels)
 ```
 
-```{r TitanicTuneModel2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+"))
+<!-- ```{r TitanicTuneModel2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+")) -->
 
-Titanic.tunedcart2 <- rpart(lFormula,
-                           data = dtTitanicTrain,
-                           control = rpart.control(minsplit = 10,
-                                                   maxdepth = 5,
-                                                   cp = 0.005))
+<!-- Titanic.tunedcart2 <- rpart(lFormula, -->
+<!--                            data = dtTitanicTrain, -->
+<!--                            control = rpart.control(minsplit = 10, -->
+<!--                                                    maxdepth = 5, -->
+<!--                                                    cp = 0.005)) -->
 
-summary(Titanic.tunedcart2)
+<!-- Titanic.tunedcart2 <- train(Survived~Class+Sex+Age, -->
+<!--                       data = dtTitanicTrain, -->
+<!--                       method = "rpart", -->
+<!--                       trControl = control, -->
+<!--                       tuneGrid = data.frame(cp = c(0.01, 0.005)), -->
+<!--                       control = rpart.control(minsplit = 10,maxdepth = 5), -->
+<!--                       metric = metric) -->
 
-rpart.plot(Titanic.tunedcart2)
-```
+<!-- fancyRpartPlot(Titanic.tunedcart2$finalModel) -->
 
-```{r Titanicpredict2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-dtTitanicTest[,"predrpart2"] <- predict(Titanic.tunedcart,dtTitanicTest,type = "class")
+<!-- (Titanic.tunedcart2) -->
 
-confusionMatrix(dtTitanicTest[,predrpart],dtTitanicTest[,Survived])
-```
+
+
+<!-- summary(Titanic.tunedcart2) -->
+
+<!-- rpart.plot(Titanic.tunedcart2) -->
+<!-- ``` -->
+
+<!-- ```{r Titanicpredict2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
+<!-- dtTitanicTest[,"predrpart2"] <- predict(Titanic.tunedcart,dtTitanicTest,type = "class") -->
+
+<!-- confusionMatrix(dtTitanicTest[,predrpart],dtTitanicTest[,Survived]) -->
+<!-- ``` -->
 
 ## ToDo / ToAnswer
+**Iris**
+1. understand kappa
+2. CI
+3. What other metric apart from accuracy can be used here
 
 1. rpart vs caret - rpart
 2. resamples ran on titanic without setting the seed for each models. Why? [Titanic]
+3. How to broadly know how much accuracy can the dataset achieve on models? Like if features are just bad, then no point trying tuning models. 
+4. find max accuracy on base titanic dataset (only 3 variables: sex,class,age)
 
 Validate: using accuracy, precision, recall etc
 Handle imbalance in class: ? Dont know really But can still chck if model is performing 
