@@ -145,7 +145,7 @@ print(fit.linClassifier$finalModel)
 varImp(fit.linClassifier)
 ```
 **Observation:** Variable importance in the model is matching our intuition from feature plots. 
-### 5. Predict on test data
+### 6. Predict on test data
 ```{r predictOnValidationSet,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 dtTest <- data.table(dtTest)
 dtTest[,predictedClass := predict(fit.linClassifier,newdata =  dtTest)]
@@ -167,153 +167,7 @@ which eliminates a lot of preprocessing.
 * Prediction accuracy on the remaining 20% data is ~97% (only 1 sample misclassified)
 * Variable importance in each of the models is reflecting what appears from feature plots of the features. We looked at the variable importance on the linear classifier model. Petal Width & Length being important features followed by sepal length followed by sepal width.
 
-We now look at another dataset
-
-<!-- ### knn-BreastCancenWisconsin -->
-<!-- tutorial url: ml-tutorials.kyrcha.#info/knn.html -->
-<!-- ```{r setupknnbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- library(class) -->
-
-<!-- ``` -->
-
-
-<!-- ```{r loadDatabreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- fileURL <- "http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data" -->
-
-<!-- dtData <- data.table(read.csv(fileURL,header = FALSE)) -->
-<!-- str(dtData) -->
-<!-- ``` -->
-
-<!-- ```{r PreProcessbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- #first column is id column which is not required -->
-<!-- dtData <- dtData[,-1] -->
-
-<!-- #put names in the columns -->
-<!-- names(dtData) <- c("ClumpThickness", -->
-<!-- "UniformityCellSize", -->
-<!-- "UniformityCellShape", -->
-<!-- "MarginalAdhesion", -->
-<!-- "SingleEpithelialCellSize", -->
-<!-- "BareNuclei", -->
-<!-- "BlandChromatin", -->
-<!-- "NormalNucleoli", -->
-<!-- "Mitoses", -->
-<!-- "Class") -->
-
-<!-- #V7 is char. because ? whenever missing data.  -->
-<!-- dtData[,BareNuclei := ifelse(BareNuclei == "?",NA,BareNuclei)] -->
-<!-- dtData[,BareNuclei := as.integer(BareNuclei)] -->
-<!-- str(dtData) -->
-
-<!-- #make output categorical -->
-<!-- dtData[,Class := factor(Class,levels = c(2,4),labels = c("benign","malignant"))] -->
-
-<!-- print(summary(dtData)) -->
-
-<!-- #check how balanced is the dataset -->
-<!-- print(summary(dtData$Class)) -->
-
-<!-- ``` -->
-
-<!-- Note: Since range of all feature columns are same,we can probably get away with standardizing input data.  -->
-
-<!-- ```{r TrainTestSplitbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- trainingIndices <- sample(seq(1:nrow(dtData)),0.7*nrow(dtData)) -->
-<!-- dtTrain <- dtData[trainingIndices,] -->
-<!-- dtTrain <- dtTrain[complete.cases(dtTrain),] -->
-<!-- dtTrainX <- dtTrain[,1:9] -->
-<!-- dtTrainY <- dtTrain$Class #dtTrain[,10]  this doesnt work because labels have to be a vector. -->
-<!-- dtValidation <- dtData[-trainingIndices,] -->
-<!-- dtValidation <- dtValidation[complete.cases(dtValidation),] -->
-<!-- dtValidationX <- dtValidation[,1:9] -->
-<!-- dtValidationY <- dtValidation$Class  #dtValidation[,10] same as above -->
-<!-- ``` -->
-
-<!-- ```{r Modelbreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- Predictions <- knn(train = dtTrainX,test = dtValidationX,cl = dtTrainY,k = 1) -->
-<!-- ``` -->
-
-<!-- ```{r Validatebreastcancer,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- dtConfusionMatrix <- table(Predictions,dtValidationY) -->
-
-<!-- #how to choose the positive class ?  -->
-<!-- #class imbalance?  -->
-<!-- #Accuracy -->
-<!-- Accuracy = sum(Predictions == dtValidationY)/length(dtValidationY) -->
-
-<!-- #Precision -->
-<!-- Precision = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[2,1]) -->
-
-<!-- #Recall -->
-<!-- Recall = dtConfusionMatrix[2,2]/(dtConfusionMatrix[2,2] + dtConfusionMatrix[1,2]) -->
-<!-- #F1 score -->
-
-<!-- ``` -->
-
-<!-- ```{r CrossValidation,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- PredictionsknnCV <- knn.cv(train = dtTrainX,cl = dtTrainY,k = 1) -->
-
-<!-- table(PredictionsknnCV,dtTrainY) -->
-
-<!-- sum(PredictionsknnCV == dtTrainY)/length(dtTrainY) -->
-<!-- ``` -->
-
-<!-- https://courses.cognitiveclass.ai/courses/course-v1:BigDataUniversity+ML0151EN+2017/courseware/76d637cbe8024e509dc445df847e6c3a/d2529e01786a412fb009daef4b002a48/1?activate_block_id=block-v1%3ABigDataUniversity%2BML0151EN%2B2017%2Btype%40vertical%2Bblock%40356f36b091764fa9a43ccb737e586563 -->
-
-<!-- New function alert: expand.grid :  -->
-
-<!-- ```{r ChoosekValue,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- # modelControl <- trainControl(method = "cv", -->
-<!--                              # number = 10) -->
-
-<!-- modelControl <- trainControl(method = "repeatedcv", -->
-<!--                              number = 5, -->
-<!--                              repeats = 2) -->
-<!-- knngrid <- expand.grid(k = c(1,3,5,7,9)) -->
-
-<!-- knn_k_search <- train(Class~., -->
-<!--                       data = dtTrain, -->
-<!--                       method = "knn", -->
-<!--                       trControl = modelControl, -->
-<!--                       preProcess = c("center","scale"),#doing this is changing the results between this and default knn. -->
-<!--                       tuneGrid = knngrid) -->
-
-<!-- knn_k_search -->
-<!-- ``` -->
-
-<!-- ```{r defaultknncaretfit,} -->
-
-<!-- control <- trainControl(method = "cv",number = 10) -->
-<!-- metric <- "accuracy" -->
-<!-- defaultknn <- train(Class~., -->
-<!--                  data = dtTrain, -->
-<!--                  method = "knn", -->
-<!--                  metric = metric, -->
-<!--                  trControl = control) -->
-
-<!-- summary(defaultknn) -->
-<!-- ``` -->
-
-<!-- Not a lot of changes with k values. What does that tell abotu the dataset?  -->
-
-<!-- Cross validation : caret easy settings -->
-<!-- optimal k value : caret does it -->
-<!-- Validation metrics : depends on the dataset I guess -->
-
-<!-- Summary:  -->
-<!-- knn : -->
-<!-- caret or class -->
-<!-- in class u specify k value -->
-<!-- check if overfitting by doing confusion matrix -->
-
-<!-- choosing k value  -->
-<!-- all in train function in caret -->
-<!-- metric -->
-<!-- method -->
-<!-- training control  -->
-<!-- preprocess -->
-
-<!-- Preprocess: center, scale, pca.  -->
+We now look at another dataset: Titanic 
 
 ## Titanic
 
@@ -338,16 +192,25 @@ Task: Binary classification
 library(rattle)
 library(rpart)
 library(rpart.plot)
-library(party)
 
-summary(Titanic)
-head(Titanic)
+# library(qwraps2)
+# options(qwraps2_markup = "markdown")
 
+mosaicplot(Titanic)
 ```
+**High Level summary of the dataset**
+1. Sex: Male, Female
+2. Class: 1, 2, 3, Crew
+3. Age: Adult, Child
 
-```{r featureanalysis,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
-
-```
+Understanding of survival based on the above factors from the mosaic plot: 
+1. Higher Survival Rates:
+  + 1st class + Female + (Any age) (mostly all survived)
+  + 2nd class + Female + adult (majority survived)
+  + 2nd class + Female + child (all survived)
+2. Low survival rates:  
+  + 3rd class + Male + (Any age)
+  + 2nd class + Male + Adult
 
 ```{r preprocessing,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 8, fig.height = 4}
 temp <- data.table(Titanic)
@@ -359,7 +222,8 @@ dtTitanic[,Class := as.factor(Class)]
 dtTitanic[,Sex := as.factor(Sex)]
 dtTitanic[,Survived := as.factor(Survived)]
 dtTitanic[,Age := as.factor(Age)]
-summary(dtTitanic$Survived)
+
+summary(dtTitanic)
 ```
 
 ### 3. Build model: a) Train-test split
@@ -382,166 +246,59 @@ metric <- "accuracy"
 ```
 
 ### 3. Build model:
-Distance based models are out: 
+Distance based models are out.
+We try a decision tree. We tune it with 2 different cp values 0.005,0.01 (default) & look at the tree logic.
 ```{r TitanicModel1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 # lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+"))
 Titanic.cart <- train(Survived~Class+Sex+Age,
                       data = dtTitanicTrain,
                       method = "rpart",
                       trControl = control,
+                      tuneGrid =  expand.grid(cp = c(0.005,0.01)),
                       metric = metric)
 
 fancyRpartPlot(Titanic.cart$finalModel)
-
 (Titanic.cart)
-
-#conditional tree
-Titanic.ctree <- ctree(Survived~Class+Sex+Age,
-                      data = dtTitanicTrain)
-
-plot(Titanic.ctree)
-
-predCtree <- predict(Titanic.ctree,dtTitanicTest)
-
-confusionMatrix(predCtree,dtTitanicTest$Survived)
 ```
-**Observation:** Accuracy of the tree: ~78% 
-Let's see if we can improve this by tuning the tree a little
+**Observation:** 
+Tree logic looks good. 
+This is  the max information that can be extracted from the categorical dataset available.
+Accuracy of the tree on training data with cp = 0.005: ~78% 
 
-```{r TitanicTuneModel1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+"))
-
-Titanic.tunedcart <- rpart(lFormula,
-                           data = dtTitanicTrain)
-
-summary(Titanic.tunedcart)
-
-rpart.plot(Titanic.tunedcart)
-```
-
+### 4. Predict on test data
 ```{r Titanicpredict1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-dtTitanicTest[,"predrpart"] <- predict(Titanic.tunedcart,dtTitanicTest,type = "class")
+dtTitanicTest[,"predictedClass"] <- predict(Titanic.tunedcart,
+                                       dtTitanicTest,
+                                       type = "class")
 
-confusionMatrix(dtTitanicTest[,predrpart],dtTitanicTest[,Survived])
+confusionMatrix(dtTitanicTest[,predictedClass],dtTitanicTest[,Survived])
 ```
+**Observations:**
+Accuracy of the model is decent ~82% however it is quite poorly classifying the survived class. The accuracy number is still high because of the class imbalance (~2/3 not survived class). Balanced accuracy is 72%. 
 
-```{r TitanicVariousClsasificationModels,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-set.seed(5)
-Titanic.knn <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "knn",
-                     trControl = control,
-                     metric = metric)
-set.seed(5)
-Titanic.rf <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "rf",
-                     trControl = control,
-                     metric = metric)
-set.seed(5)
-Titanic.lda <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "lda",
-                     trControl = control,
-                     metric = metric)
-set.seed(5)
-Titanic.nb <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "nb",
-                     trControl = control,
-                     metric = metric)
-set.seed(5)
-Titanic.linClassifier <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "vglmAdjCat",
-                     trControl = control,
-                     metric = metric)
-set.seed(5)
-Titanic.svm <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "svmRadial",
-                     trControl = control,
-                     metric = metric)
-
-set.seed(5)
-Titanic.logReg <- train(Survived~Class+Sex+Age,
-                     data = dtTitanicTrain,
-                     method = "glm",
-                     family = "binomial",
-                     trControl = control,
-                     metric = metric)
-```
-
-### 4. Identify best model
-
-```{r TitanicCheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-TitanicMultipleModels <- resamples(list(Titaniccart = Titanic.cart,
-                                        Titanicknn = Titanic.knn,
-                                        Titanicrf = Titanic.rf,
-                                        TitanicLDA = Titanic.lda,
-                                        TitanicNB = Titanic.nb,
-                                        TitanicLinClassifier = Titanic.linClassifier,
-                                        TitanicSVM = Titanic.svm,
-                                        TitanicLogReg = Titanic.logReg
-                                        ))
-
-summary(TitanicMultipleModels)
-
-dotplot(TitanicMultipleModels)
-```
-
-<!-- ```{r TitanicTuneModel2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- lFormula <- paste0(names(dtTitanic)[4],"~",paste(names(dtTitanic)[1:3],collapse = "+")) -->
-
-<!-- Titanic.tunedcart2 <- rpart(lFormula, -->
-<!--                            data = dtTitanicTrain, -->
-<!--                            control = rpart.control(minsplit = 10, -->
-<!--                                                    maxdepth = 5, -->
-<!--                                                    cp = 0.005)) -->
-
-<!-- Titanic.tunedcart2 <- train(Survived~Class+Sex+Age, -->
-<!--                       data = dtTitanicTrain, -->
-<!--                       method = "rpart", -->
-<!--                       trControl = control, -->
-<!--                       tuneGrid = data.frame(cp = c(0.01, 0.005)), -->
-<!--                       control = rpart.control(minsplit = 10,maxdepth = 5), -->
-<!--                       metric = metric) -->
-
-<!-- fancyRpartPlot(Titanic.tunedcart2$finalModel) -->
-
-<!-- (Titanic.tunedcart2) -->
-
-
-
-<!-- summary(Titanic.tunedcart2) -->
-
-<!-- rpart.plot(Titanic.tunedcart2) -->
-<!-- ``` -->
-
-<!-- ```{r Titanicpredict2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10} -->
-<!-- dtTitanicTest[,"predrpart2"] <- predict(Titanic.tunedcart,dtTitanicTest,type = "class") -->
-
-<!-- confusionMatrix(dtTitanicTest[,predrpart],dtTitanicTest[,Survived]) -->
-<!-- ``` -->
+We now look at a more detailed Titanic dataset. 
 
 ## ToDo / ToAnswer
 **Iris**
 1. understand kappa
 2. CI
 3. What other metric apart from accuracy can be used here
-
-1. rpart vs caret - rpart
-2. resamples ran on titanic without setting the seed for each models. Why? [Titanic]
-3. How to broadly know how much accuracy can the dataset achieve on models? Like if features are just bad, then no point trying tuning models. 
+**Titanic**
+4. Which classification models are distance based and wont work with data with all categorical variables? 
+5. rpart vs caret - rpart
+6. resamples ran on titanic without setting the seed for each models. Why? [Titanic]
+7. How to broadly know how much accuracy can the dataset achieve on models? Like if features are just bad, then no point trying tuning models. 
+8. ctree vs rpart
 4. find max accuracy on base titanic dataset (only 3 variables: sex,class,age)
 
 Validate: using accuracy, precision, recall etc
 Handle imbalance in class: ? Dont know really But can still chck if model is performing 
-
 how to tell the model about the positive class. 
 
 ## notes to self
-1. Important function: resamples : Collation and Visualization of Resampling Results
+1. Beautiful function that works on tables: mosaicplot : Gave all info of Titanic dataset in 1 plot.
+2. Not best summary table but still: qwrap2 library's summary_table (qwrap2_markup = "markdown" needs to be configured)
+3. Important function: resamples : Collation and Visualization of Resampling Results
    resamples checks that the resampling results match; that is, the indices in the object trainObject$control$index are the same. Also, the argument trainControl returnResamp should have a value of "final" for each model. 
 The summary function computes summary statistics across each model/metric combination. [https://www.rdocumentation.org/packages/caret/versions/6.0-86/topics/resamples](https://www.rdocumentation.org/packages/caret/versions/6.0-86/topics/resamples)        
 
