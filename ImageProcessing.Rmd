@@ -8,6 +8,7 @@ Tutorial followed: https://keras.rstudio.com/articles/tutorial_basic_classificat
 
 ```{r setup,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(keras)
+
 ```
 
 ```{r loadData,include=FALSE,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}

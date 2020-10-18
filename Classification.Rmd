@@ -57,6 +57,8 @@ Task: Classification of iris species from the sepal & petal length and width fea
 ```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
 library(caret)
+source("/home/nirzareevadgama/Projects/MLWithR/fMultipleClassificationModels.R")
+
 ```
 
 ### 1. Load Data
@@ -152,20 +154,21 @@ dtTest[,predictedClass := predict(fit.linClassifier,newdata =  dtTest)]
 
 confusionMatrix(dtTest[,predictedClass],dtTest[,Species])
 ```
-**Observation:**
-* 1 sample of virginica is being classified as versicolor by the model which results in reduced sensitivity towards the virginica class and slightly reduced specificity of the versicolor class.
-* Balanced Accuracy of each of the classes are: Setosa (1), Versicolor (0.975), Virginica (0.95)
+
+**Observation:**  
+* 1 sample of virginica is being classified as versicolor by the model which results in reduced sensitivity towards the virginica class and slightly reduced specificity of the versicolor class.  
+* Balanced Accuracy of each of the classes are: Setosa (1), Versicolor (0.975), Virginica (0.95)  
 * Overall accuracy of the model is : 29/30 = 0.9667
 
 **Summary:**
 * This is a beautiful dataset with respect to:
   1. Having completely balanced classes
   2. All features having the same range and units
-which eliminates a lot of preprocessing. 
-* We tried a few classification models on the dataset after splitting the dataset into an 80:20 train:test split with 10 fold cross validation.
-* Linear Classifier had the highest accuracy among all the other models, hence we used it to make predictions on the remaining 20% data.
-* Prediction accuracy on the remaining 20% data is ~97% (only 1 sample misclassified)
-* Variable importance in each of the models is reflecting what appears from feature plots of the features. We looked at the variable importance on the linear classifier model. Petal Width & Length being important features followed by sepal length followed by sepal width.
+which eliminates a lot of preprocessing.   
+* We tried a few classification models on the dataset after splitting the dataset into an 80:20 train:test split with 10 fold cross validation.  
+* Linear Classifier had the highest accuracy among all the other models, hence we used it to make predictions on the remaining 20% data.  
+* Prediction accuracy on the remaining 20% data is ~97% (only 1 sample misclassified)  
+* Variable importance in each of the models is reflecting what appears from feature plots of the features. We looked at the variable importance on the linear classifier model. Petal Width & Length being important features followed by sepal length followed by sepal width.  
 
 We now look at another dataset: Titanic 
 
@@ -267,33 +270,302 @@ Accuracy of the tree on training data with cp = 0.005: ~78%
 
 ### 4. Predict on test data
 ```{r Titanicpredict1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-dtTitanicTest[,"predictedClass"] <- predict(Titanic.tunedcart,
-                                       dtTitanicTest,
-                                       type = "class")
+dtTitanicTest[,"predictedClass"] <- predict(Titanic.cart,
+                                       dtTitanicTest)
 
 confusionMatrix(dtTitanicTest[,predictedClass],dtTitanicTest[,Survived])
 ```
 **Observations:**
 Accuracy of the model is decent ~82% however it is quite poorly classifying the survived class. The accuracy number is still high because of the class imbalance (~2/3 not survived class). Balanced accuracy is 72%. 
 
-We now look at a more detailed Titanic dataset. 
+## Sonar Dataset
+
+### 1. Load Data
+```{r loadSonar,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(mlbench)
+data("Sonar")
+dtSonar <- data.table(Sonar)
+rm(Sonar)
+```
+
+```
+Dataset description: This is the data set used by Gorman and Sejnowski in their study of the classification of sonar signals using a neural network [1]. 
+
+The task is to train a network to discriminate between sonar signals bounced off a metal cylinder and those bounced off a roughly cylindrical rock.
+
+Each pattern is a set of 60 numbers in the range 0.0 to 1.0. Each number represents the energy within a particular frequency band, integrated over a certain period of time. The integration aperture for higher frequencies occur later in time, since these frequencies are transmitted later during the chirp.
+
+The label associated with each record contains the letter "R" if the object is a rock and "M" if it is a mine (metal cylinder). The numbers in the labels are in increasing order of aspect angle, but they do not encode the angle directly.
+```
+
+* References:  
+  1. https://www.kaggle.com/edhenrivi/introduction-classification-sonar-dataset polynomial features
+  2. https://machinelearningmastery.com/binary-classification-tutorial-with-the-keras-deep-learning-library/ Keras binary classification : vanilla -> scalingoffeatures -> tuningofnetwork
+  3. https://www.simonwenkel.com/2018/08/23/revisiting_ml_sonar_mines_vs_rocks.html 
+  4. http://people.duke.edu/~ccc14/sta-663-2016/05_Machine_Learning.html#Resources no NN, pca + standard classification approaches
+
+### 2. Feature Exploration
+```{r featureanalysisSonar,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# boxplot(dtSonar[,1:60],
+#         xlab = "Frequency bin",
+#         ylab = "Power spectral density (normalized)",
+#         main = "Boxplots of all frequency bins")
+
+#wide to long for colored boxplots
+#ref: https://stackoverflow.com/questions/14604439/plot-multiple-boxplot-in-one-graph
+dtSonarTall <- melt(dtSonar,id.vars = c("Class"))
+ggplot(data = dtSonarTall,aes(x = variable, y = value)) + geom_boxplot(aes(fill = Class))
+
+summary(dtSonar$Class)
+```
+
+### 3. Preprocessing
+```{r preprocessingSonar,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# dtSonar[, Rock := ifelse(Class == "R",1,0)]
+# dtSonar[, Mine := ifelse(Class == "M",1,0)]
+dtSonar[,ClassNumeric := ifelse(Class == "M",1,0)]
+dtSonar[,ClassNumeric := as.factor(ClassNumeric)]
+```
+
+### 3. Build model: a) Train-test split
+```{r SonarSplitData,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#split data into test train 
+set.seed(10)
+trainingIndex <- sample(seq(1:nrow(dtSonar)),0.8*nrow(dtSonar))
+
+dtSonarTrain <- as.matrix(dtSonar[trainingIndex,1:60])
+dtSonarTest <- as.matrix(dtSonar[-trainingIndex,1:60])
+
+SonarTrainLabels <- dtSonar[trainingIndex,ClassNumeric]
+SonarTestLabels <- dtSonar[-trainingIndex,ClassNumeric]
+
+SonarTrainLabelsNN <- as.numeric(as.matrix(SonarTrainLabels))
+SonarTestLabelsNN <- as.numeric(as.matrix(SonarTestLabels))
+```
+
+### 3. Build model: b) Training config:
+                        method = 10 fold cross validation (todo: how many repeats?)
+                        metric = accuracy
+                        
+```{r SonarClassifiermodel_config,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+control <- trainControl(method = "cv",
+                        number = 10)
+metric <- "accuracy"
+```
+
+### 3. Build model: c) Build multiple models
+1. Linear Classifier
+2. LDA
+3. CART (Decision tree)
+4. kNN
+5. SVM (Linear)
+6. SVM (Radial)
+7. RF
+8. Naive Bayes
+
+We try these classification models using caret package's train function
+```{r SonarClassifiermodel_tryModels,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+AllModelsSonar <- fMultipleClassificationModels(TrainingData = dtSonarTrain,
+                              TrainingLabels = SonarTrainLabels,
+                              TrainingControl = control,
+                              EvalMetric = "accuracy",
+                              TrainingModels = c("vglmAdjCat","lda","rpart","knn","svmLinear","svmRadial","rf","nb"))
+```
+
+### 4. Identify the best model
+```{r SonarCheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+ClassificationResultsSonar <- resamples(list(LinClassifier = AllModelsSonar[[1]],
+                                        LDA = AllModelsSonar[[2]],
+                                        CART = AllModelsSonar[[3]],
+                                        knn = AllModelsSonar[[4]],
+                                        SVMLinear = AllModelsSonar[[5]],
+                                        SVMRadial = AllModelsSonar[[6]],
+                                        RF = AllModelsSonar[[7]],
+                                        NB = AllModelsSonar[[8]]))
+summary(ClassificationResultsSonar)
+dotplot(ClassificationResultsSonar)
+```
+**Observation:** SVMRadial & Random forest are better than other models with median accuracy of ~85% & ~79% resp. We now look at test data accuracy of the 2 models.
+
+### 5. Predict on test data
+```{r Sonarpredict1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+SonarSVMRadialPrediction <- predict(AllModelsSonar[[6]],
+                                       dtSonarTest)
+
+confusionMatrix(SonarSVMRadialPrediction,SonarTestLabels)
+
+SonarRFPrediction <- predict(AllModelsSonar[[7]],
+                                       dtSonarTest)
+
+confusionMatrix(SonarRFPrediction,SonarTestLabels)
+```
+**Observations:** Test data accuracy of both the models is ~81% which is less than accuracy on training data for SVMRadial but around the same order as in Random Forest. Hence Random Forest looks a better model to implement. 
+
+We come back to tuning these models after a run of Neural Network.
+
+### 5. Deep learning  on the dataset
+```{r SonarNN,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(keras)
+
+SonarNN <- keras_model_sequential() %>% layer_dense(units = 60,activation = 'relu',input_shape = 60) %>% layer_dense(units = 1,activation = 'sigmoid')
+
+SonarNN %>% compile(optimizer = 'adam',
+                    loss = 'binary_crossentropy',
+                    metrics = c('accuracy'))
+
+history <- SonarNN %>% fit(
+  dtSonarTrain,
+  SonarTrainLabelsNN,
+  epochs = 100,
+  batch_size = 5,
+  validation_data = list(dtSonarTest,
+                         SonarTestLabelsNN)
+)
+
+plot(history)
+```
+**Observation** Post epoch 30, the model starts overfitting to training data without any advantage on the test data accuracy. The validation accuracy at Epoch 30 is ~86% (todo: is this median/max/min?), which might be better than the models so far if it is median/min. accuracy. 
+
+### 6. Scaling the data
+```{r SonarScaling, echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtSonarScaled <- scale(dtSonar[,1:60])
+
+# colMeans(dtSonarTrainScaled)
+# apply(dtSonarTrainScaled, 2, sd)
+```
+
+### 7. PCA on scaled data
+```{r PCASonar,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtSonarPCA <- prcomp(dtSonarScaled[,1:60])
+summary(dtSonarPCA)
+
+# % of total variance explained with 25 components
+(cumsum(dtSonarPCA$sdev^2)/sum(dtSonarPCA$sdev^2))[25]
+
+#split pca data into train and test
+```
+
+### 8. Build model: a) Train-test split
+```{r SonarPCASplitData,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#split data into test train 
+dtSonarselectedPCA <- dtSonarPCA$x[,1:25]
+set.seed(10)
+trainingIndex <- sample(seq(1:nrow(dtSonarselectedPCA)),0.8*nrow(dtSonarselectedPCA))
+
+dtSonarPCATrain <- as.matrix(dtSonarselectedPCA[trainingIndex,])
+dtSonarPCATest <- as.matrix(dtSonarselectedPCA[-trainingIndex,])
+
+SonarPCATrainLabels <- dtSonar[trainingIndex,ClassNumeric]
+SonarPCATestLabels <- dtSonar[-trainingIndex,ClassNumeric]
+
+SonarPCATrainLabelsNN <- as.numeric(as.matrix(SonarPCATrainLabels))
+SonarPCATestLabelsNN <- as.numeric(as.matrix(SonarPCATrainLabels))
+```
+
+
+### 9. Try non-NN models again after scaling + PCA
+```{r SonarClassifiermodel_tryModels_afterScalingAndPCA,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+AllModelsSonarAfterPCA <- fMultipleClassificationModels(TrainingData = dtSonarPCATrain,
+                              TrainingLabels = SonarPCATrainLabels,
+                              TrainingControl = control,
+                              EvalMetric = "accuracy",
+                              TrainingModels = c("vglmAdjCat","lda","rpart","knn","svmLinear","svmRadial","rf","nb"))
+```
+
+```{r SonarCheckModelAccuracy2,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+ClassificationResultsSonar2 <- resamples(list(LinClassifier = AllModelsSonarAfterPCA[[1]],
+                                        LDA = AllModelsSonarAfterPCA[[2]],
+                                        CART = AllModelsSonarAfterPCA[[3]],
+                                        knn = AllModelsSonarAfterPCA[[4]],
+                                        SVMLinear = AllModelsSonarAfterPCA[[5]],
+                                        SVMRadial = AllModelsSonarAfterPCA[[6]],
+                                        RF = AllModelsSonarAfterPCA[[7]],
+                                        NB = AllModelsSonarAfterPCA[[8]]))
+summary(ClassificationResultsSonar2)
+dotplot(ClassificationResultsSonar2)
+```
+
+**Observation:** knn is the most promising model now followed by linear classifier followed by CART decision tree.
+
+### 10. Predict new models on test data
+```{r Sonarpredict2,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+SonarknnPrediction <- predict(AllModelsSonarAfterPCA[[4]],
+                                       dtSonarPCATest)
+
+confusionMatrix(SonarknnPrediction,SonarTestLabels)
+
+SonarLinClassifierPrediction <- predict(AllModelsSonarAfterPCA[[1]],
+                                       dtSonarPCATest)
+
+confusionMatrix(SonarLinClassifierPrediction,SonarTestLabels)
+
+SonarCARTPrediction <- predict(AllModelsSonarAfterPCA[[3]],
+                                       dtSonarPCATest)
+
+confusionMatrix(SonarCARTPrediction, SonarTestLabels)
+```
+**Observations:** knn accuracy on test data is ~90%. 
+Now we rerun NN on scaled data. 
+
+### 11. Build Deep Learning model on Scaled Data: a) Train-test split
+```{r SonarScaledSplitData,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#split data into test train 
+set.seed(10)
+trainingIndex <- sample(seq(1:nrow(dtSonarScaled)),0.8*nrow(dtSonarScaled))
+
+dtSonarScaledTrain <- as.matrix(dtSonarScaled[trainingIndex,])
+dtSonarScaledTest <- as.matrix(dtSonarScaled[-trainingIndex,])
+
+SonarScaledTrainLabels <- dtSonar[trainingIndex,ClassNumeric]
+SonarScaledTestLabels <- dtSonar[-trainingIndex,ClassNumeric]
+
+SonarScaledTrainLabelsNN <- as.numeric(as.matrix(SonarScaledTrainLabels))
+SonarScaledTestLabelsNN <- as.numeric(as.matrix(SonarScaledTestLabels))
+```
+
+### 12. Deep learning  on the scaled dataset
+```{r SonarNN2,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(keras)
+
+SonarNN2 <- keras_model_sequential() %>% layer_dense(units = 60, activation = 'relu', input_shape = 60) %>% layer_dense(units = 1,activation = 'sigmoid')
+
+SonarNN2 %>% compile(optimizer = 'adam',
+                    loss = 'binary_crossentropy',
+                    metrics = c('accuracy'))
+
+history2 <- SonarNN2 %>% fit(
+  dtSonarScaledTrain,
+  SonarScaledTrainLabelsNN,
+  epochs = 100,
+  batch_size = 5,
+  validation_data = list(dtSonarScaledTest,
+                         SonarScaledTestLabelsNN)
+)
+
+plot(history2)
+```
+**Observation** Post epoch 9, the accuracy on validation set is constant.Max validation accuracy is at Epoch 7 ~90%. 
+It is similar to the knn accuracy obtained on scaled + pca data. However NN can be tuned further for more accuracy. 
+
 
 ## ToDo / ToAnswer
-**Iris**
-1. understand kappa
-2. CI
-3. What other metric apart from accuracy can be used here
-**Titanic**
-4. Which classification models are distance based and wont work with data with all categorical variables? 
-5. rpart vs caret - rpart
-6. resamples ran on titanic without setting the seed for each models. Why? [Titanic]
-7. How to broadly know how much accuracy can the dataset achieve on models? Like if features are just bad, then no point trying tuning models. 
-8. ctree vs rpart
-4. find max accuracy on base titanic dataset (only 3 variables: sex,class,age)
-
-Validate: using accuracy, precision, recall etc
-Handle imbalance in class: ? Dont know really But can still chck if model is performing 
-how to tell the model about the positive class. 
+**Iris**  
+1. understand kappa  
+2. CI  
+3. What other metric apart from accuracy can be used here  
+**Titanic**  
+4. Which classification models are distance based and wont work with data with all categorical variables?  
+5. rpart vs caret - rpart  
+6. resamples ran on titanic without setting the seed for each models. Why? [Titanic]  
+7. How to broadly know how much accuracy can the dataset achieve on models? Like if features are just bad, then no point trying tuning models.   
+8. ctree vs rpart  
+9. find max accuracy on base titanic dataset (only 3 variables: sex, class, age)  
+10. work on detailed titanic dataset and see how the predictions are.   
+**Sonar**
+11. So many details within each step to be understood properly  
+12. how to even choose an approach here? NN or non NN? pre process data or not? PCA or not?   
+13. How to validate the final answer?   
+14. Any misleading results?   
 
 ## notes to self
 1. Beautiful function that works on tables: mosaicplot : Gave all info of Titanic dataset in 1 plot.

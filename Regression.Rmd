@@ -226,7 +226,7 @@ MultLinearModel2 <- lm(mpg~wt+am+disp,data = dtMTCars)
 summary(MultLinearModel2)
 ```
 
-**Observatiions:**
+**Observations:**
 * Horse power is better for the model than engine displacement from $R^2 adjusted$ metric, hence we keep the model with engine displacement.
 * Also transmission type is not very useful in both the models, so we remove it. 
 

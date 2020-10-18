@@ -1,0 +1,36 @@
+---
+title: "Spam Detection"
+author: "Nirzaree"
+date: "16/10/2020"
+output:
+  html_document:
+    fig_caption: true
+    toc: true
+    toc_float: true
+    toc_collapsed: true
+toc_depth: 3
+---
+
+Trying:
+1. NB
+2. RF
+3. DT on the dataset
+
+Steps1: 
+
+```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+
+```
+
+```{r getData,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtSpamData <- fread("/home/nirzareevadgama/Data/MLDatasets/spambase/spambase.data")
+str(dtSpamData)
+
+dim(dtSpamData)
+```
+
+```{r someFeaturePlots,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+densityplot(dtSpamData[V58 == 1 & V57 < 2000,V57])
+lines(densityplot(dtSpamData[V58 == 0 & V57 < 2000,V57],col = "black"))
+```
+

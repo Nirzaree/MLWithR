@@ -1,3 +1,5 @@
+library(caret)
+
 fMultipleClassificationModels <- function(TrainingData, TrainingLabels, TrainingControl, EvalMetric, TrainingModels) {
   AllModels <- lapply(TrainingModels, function(x) {
     set.seed(3)
