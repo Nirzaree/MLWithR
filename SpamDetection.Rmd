@@ -17,20 +17,198 @@ Trying:
 3. DT on the dataset
 
 Steps1: 
+1. find a good tutorial. couldnt find. 
+2. try on my own. 
 
 ```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(ggplot2)
+library(data.table)
+library(caret)
+library(kableExtra)
 
+source("/home/nirzareevadgama/Projects/MLWithR/fMultipleClassificationModels.R")
 ```
 
+```
+Dataset Description:
+The last column of 'spambase.data' denotes whether the e-mail was considered spam (1) or not (0), i.e. unsolicited commercial e-mail. Most of the attributes indicate whether a particular word or character was frequently occuring in the e-mail. The run-length attributes (55-57) measure the length of sequences of consecutive capital letters. For the statistical measures of each attribute, see the end of this file. Here are the definitions of the attributes:
+
+48 continuous real [0,100] attributes of type word_freq_WORD
+= percentage of words in the e-mail that match WORD, i.e. 100 * (number of times the WORD appears in the e-mail) / total number of words in e-mail. A "word" in this case is any string of alphanumeric characters bounded by non-alphanumeric characters or end-of-string.
+
+6 continuous real [0,100] attributes of type char_freq_CHAR]
+= percentage of characters in the e-mail that match CHAR, i.e. 100 * (number of CHAR occurences) / total characters in e-mail
+
+1 continuous real [1,...] attribute of type capital_run_length_average
+= average length of uninterrupted sequences of capital letters
+
+1 continuous integer [1,...] attribute of type capital_run_length_longest
+= length of longest uninterrupted sequence of capital letters
+
+1 continuous integer [1,...] attribute of type capital_run_length_total
+= sum of length of uninterrupted sequences of capital letters
+= total number of capital letters in the e-mail
+
+1 nominal {0,1} class attribute of type spam
+= denotes whether the e-mail was considered spam (1) or not (0), i.e. unsolicited commercial e-mail.
+```
+### 1. Load Data
 ```{r getData,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 dtSpamData <- fread("/home/nirzareevadgama/Data/MLDatasets/spambase/spambase.data")
-str(dtSpamData)
+# str(dtSpamData)
 
 dim(dtSpamData)
+
+dtSpamData[,V58 := as.factor(V58)]
+
+summary(dtSpamData$V58)
+```
+**Observations:** 57 feature columns, 1 output column. 4601 samples. 
+48 word features, 6 character columns, 3 aggregate 
+
+### 2. Feature Exploration
+```{r someFeaturePlots,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# densityplot(dtSpamData[V58 == 1 & V57 < 2000,V57])
+# lines(densityplot(dtSpamData[V58 == 0 & V57 < 2000,V57],col = "black"))
+
+#suppressing the outliers for the moment.
+featurePlot(dtSpamData[V55 < 50 & V56 < 50 & V57 < 50, 55:57],dtSpamData[V55 < 50 & V56 < 50 & V57 < 50]$V58,"box")
+
+#Exclamation & Dollar signs
+featurePlot(dtSpamData[V52 < 10 & V53 < 10,52:53],dtSpamData[V52 < 10 & V53 < 10]$V58,"box")
+
+#free, credit, money
+featurePlot(dtSpamData[V16 < 5 & V20 < 5 & V24 < 5,c("V16","V20","V24")],dtSpamData[V16 < 5 & V20 < 5 & V24 < 5]$V58,"box")
+```
+**Observations:**
+Clearly, spam mails have more capital letter occurences, more ! & $ signs and more occurences of free, money words.. 
+
+Now we try out some models on the data: 
+### 3. Build model: a) Train-test split
+```{r Classifiermodel_splitData,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+trainingIndex <- sample(seq(1:nrow(dtSpamData)),nrow(dtSpamData[,58])*0.8)
+
+dtTrain <- dtSpamData[trainingIndex,]
+dtTest <- dtSpamData[-trainingIndex,]
+```
+### 3. Build model: b) Training config:
+                        method = 10 fold cross validation 
+                        metric = Kappa
+```{r Classifiermodel_config,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+control <- trainControl(method = "cv",
+                        number = 10)
+metric <- "Kappa"
 ```
 
-```{r someFeaturePlots,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
-densityplot(dtSpamData[V58 == 1 & V57 < 2000,V57])
-lines(densityplot(dtSpamData[V58 == 0 & V57 < 2000,V57],col = "black"))
+### 3. Build model: c) Build multiple models
+1. CART (Decision tree)
+2. SVM
+3. RF
+4. Naive Bayes
+5. Logistic Regression
+
+
+```{r Classifiermodel_tryModels,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+AllModels <- fMultipleClassificationModels(TrainingData = dtTrain[,1:57],
+                              TrainingLabels = dtTrain$V58,
+                              TrainingControl = control,
+                              EvalMetric = metric,
+                              TrainingModels =  c("rpart","svmRadial","rf","nb","glm")
+                              )
+
+# AllModels[[5]] <- fMultipleClassificationModels(TrainingData = dtTrain[,1:57],
+#                               TrainingLabels = dtTrain$V58,
+#                               TrainingControl = control,
+#                               EvalMetric = metric,
+#                               TrainingModels =  c("glm")
+#                               )
 ```
 
+### 4. Identify the best model
+
+```{r CheckModelAccuracy,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+ClassificationResults <- resamples(
+  list(
+    CART = AllModels[[1]],
+    SVM = AllModels[[2]],
+    RF = AllModels[[3]],
+    NB = AllModels[[4]],
+    LogReg = AllModels[[5]]
+  )
+)
+
+summary(ClassificationResults)
+dotplot(ClassificationResults)
+```
+
+You want a model where a not-spam message is not classified as spam as much as possible. (Lowest false positive) while also trying to capture as many spam messages (higher recall: TP/TP+FN)
+
+### 5. Predict on test data
+```{r Sonarpredict1,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+
+dtTest[,predictCART := predict(AllModels[[1]],dtTest)]
+dtTest[,predictSVM := predict(AllModels[[2]],dtTest[,1:57])]
+dtTest[,predictRF := predict(AllModels[[3]],dtTest)]
+dtTest[,predictNB := predict(AllModels[[4]],dtTest)]
+dtTest[,predictLogReg := predict(AllModels[[5]],dtTest)]
+
+cmCART <- confusionMatrix(dtTest[,predictCART],dtTest[,V58])
+cmSVM <- confusionMatrix(dtTest[,predictSVM],dtTest[,V58])
+cmRF <- confusionMatrix(dtTest[,predictRF],dtTest[,V58])
+cmNB <- confusionMatrix(dtTest[,predictNB],dtTest[,V58])
+cmLogReg <- confusionMatrix(dtTest[,predictLogReg],dtTest[,V58])
+```
+
+**Observation:**
+1. The issue with the metrics here is that the majority class is treated as the true class, and in a spam database, it is generally the minority class. Hence the recall here is the recall for the non-spam class and not for the spam class. 
+
+Metrics relevant to us:
+1. Highest detection of spam
+2. Least false positives (nonspam being predicted as spam)
+
+These numbers for each of the models are as: 
+
+Best model in capturing spam messages (highest number of actual spam messages captured. Highest Recall. (TP/TP+FN)) 
+```{r precisionRecall,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+
+#Get Recall of each model
+dtSpamModelEval <- data.table(
+  Models = c("CART",
+             "SVM",
+             "RF",
+             "NB",
+             "LogReg"),
+  Recall = c(cmCART$table[2,2]/(cmCART$table[2,2] + cmCART$table[1,2]),
+             cmSVM$table[2,2]/(cmSVM$table[2,2] + cmSVM$table[1,2]),
+             cmRF$table[2,2]/(cmRF$table[2,2] + cmRF$table[1,2]),
+             cmNB$table[2,2]/(cmNB$table[2,2] + cmNB$table[1,2]),
+             cmLogReg$table[2,2]/(cmLogReg$table[2,2] + cmLogReg$table[1,2])
+             ),
+  FalsePositives = c(cmCART$table[2,1],
+                     cmSVM$table[2,1],
+                     cmRF$table[2,1],
+                     cmNB$table[2,1],
+                     cmLogReg$table[2,1]
+                     )
+)
+
+kable(dtSpamModelEval)
+```
+
+**Observation:**
+* NB has the highest recall but also lot of false positives (it is mostly predicting Spam class).
+* Model with least false positives is Random Forest and it also has the second best recall. 
+* Model order in terms of least amount of false positive : RF > SVM > LogReg > CART > NB. 
+
+
+Todo:
+1. Word clouds
+2. Better accessing feature columns: 
+3. Split in a way as to have equal fraction of spam in test and train 
+4. Best tuning metric: ?
+5. It took forever to train with 10 fold CV. Figure if CV is needed.
+6. Understand resamples and dotplot. 
+7. How do you tell the model that false positive is a bigger cost than false negative? 
+8. Other Naive bayes variants
+9. NN 
+10. Hyper parameter tuning

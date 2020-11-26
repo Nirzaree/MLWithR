@@ -4,10 +4,12 @@ fMultipleClassificationModels <- function(TrainingData, TrainingLabels, Training
   AllModels <- lapply(TrainingModels, function(x) {
     set.seed(3)
     TrainedModel <- train(TrainingData,
-                              TrainingLabels,
-                              method = x,
-                              metric = EvalMetric,
-                              trControl = TrainingControl)
+                          TrainingLabels,
+                          method = x,
+                          metric = EvalMetric,
+                          trControl = TrainingControl
+                          # family = "binomial" #only for glm method
+    )
     
     return(TrainedModel)
   })

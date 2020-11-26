@@ -137,6 +137,7 @@ ClassificationResults <- resamples(list(LinClassifier = AllModels[[1]],
 summary(ClassificationResults)
 dotplot(ClassificationResults)
 ```
+
 **Observation:** Linear classifier has the highest accuracy overall.
 
 ### 5. Investigate the best model

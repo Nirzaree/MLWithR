@@ -1,0 +1,146 @@
+---
+title: "Credit Card Fraud Detection"
+author: "Nirzaree"
+date: "19/11/2020"
+output: html_document
+---
+
+```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(data.table)
+```
+
+```{r getdata,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+#check if data exists. If not, pull it from url
+filepath = paste0(Sys.getenv("MLDatasets"),
+                  "/creditcardfraud/creditcard.csv")
+
+creditcardkaggleurl <- "https://www.kaggle.com/mlg-ulb/creditcardfraud/creditcard.csv.zip"
+if (!file.exists(filepath)) {
+  #retrieve from url and save in required location
+  # dtCreditCard <- read.csv(url(creditcardkaggleurl)) #todo
+}
+
+dtCreditCard <- data.table(fread(filepath))
+#output as factor
+class(dtCreditCard$Class)
+dtCreditCard[,Class := factor(Class)]
+class(dtCreditCard$Class)
+summary(dtCreditCard$Class)
+
+head(dtCreditCard)
+dim(dtCreditCard)
+
+summary(dtCreditCard)
+```
+
+```{r ExploreData,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+dtFeatures <- dtCreditCard[,!(names(dtCreditCard) %in% c("Class")),with=FALSE]
+dtLabels <- dtCreditCard[,c("Class")]
+
+print(paste0("Valid Transactions:",nrow(dtLabels[Class == 0])))
+print(paste0("Fraudulent Transactions:",nrow(dtLabels[Class == 1])))
+
+print(paste0("% Valid Transactions:",nrow(dtLabels[Class == 0])/nrow(dtLabels) * 100))
+print(paste0("% Fraudulent Transactions:",nrow(dtLabels[Class == 1])/nrow(dtLabels) * 100))
+```
+```{r TrainTestSplit,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+set.seed(123)
+
+trainingIndices <- sample(seq(1:nrow(dtFeatures)),0.7*(nrow(dtFeatures)))
+
+dtTrainFeatures <- dtFeatures[trainingIndices,]
+dtTrainLabels <- dtLabels[trainingIndices,]
+
+dtTestFeatures <- dtFeatures[-trainingIndices,]
+dtTestLabels <- dtLabels[-trainingIndices,]
+
+#Fraction of fraudulent transactions in train and test dataset
+print(paste0("% fraudulent transactions in training dataset: ",nrow(dtTrainLabels[Class == 1])/nrow(dtTrainLabels) * 100))
+
+print(paste0("% fraudulent transactions in test dataset: ",nrow(dtTestLabels[Class == 1])/nrow(dtTestLabels) * 100))
+```
+
+Since the scale of amount and time column are much higher than other features, we apply standard scaling on them. 
+```{r FeatureEngineering,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+
+summary(dtTrainFeatures[,Time])
+summary(dtTrainFeatures[,Amount])
+
+dtTrainFeatures[,scaledTime := scale(Time)]
+summary(dtTrainFeatures[,scaledTime])
+
+dtTrainFeatures[,scaledAmount := scale(Amount)]
+summary(dtTrainFeatures[,scaledAmount])
+
+#now remove unscaled time and amount
+dtTrainFeatures[,Time := NULL]
+dtTrainFeatures[,Amount := NULL]
+
+#Do the same on test data
+dtTestFeatures[,scaledTime := scale(Time)]
+dtTestFeatures[,scaledAmount := scale(Amount)]
+
+#now remove unscaled time and amount
+dtTestFeatures[,Time := NULL]
+dtTestFeatures[,Amount := NULL]
+```
+
+todo: what is the required smote parameters for this data? 
+```{r OverSample,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(DMwR)
+
+#SMOTE requires the entire training data in a single table so we merge 
+# features and labels table. 
+dtNewTrain <- SMOTE(Class ~ .,data =  cbind(dtTrainFeatures,Class = dtTrainLabels$Class))
+table(dtNewTrain$Class)
+
+table(dtTrainLabels$Class)
+```
+todo: Find the best way to do log reg in r 
+todo: best way to do model tuning in r 
+```{r Model,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+# https://machinelearningmastery.com/tuning-machine-learning-models-using-the-caret-r-package/
+library(caret)
+library(e1071)
+library(ROCR)
+# grid <- expand.grid(penalty = c("l1","l2"),cp=c(0.001,0.01,0.1,1,10))
+
+control <- trainControl(method = "cv",
+                        number = 10,
+                        repeats = 3)
+LogRegModel <- train(Class ~ ., 
+                     data = dtNewTrain,
+                     method = "glm",
+                     family = "binomial",
+                     trControl = control)
+
+# https://stackoverflow.com/questions/47822694/logistic-regression-tuning-parameter-grid-in-r-caret-package
+#no way to tune glm method in caret. 
+```
+
+Is there no way to tune a logistic regression in R? 
+select best model from cross validation. 
+R and Python have different axis conventions in confusion matrix. R has true values in columns,
+Python has that in the rows.
+```{r Validate,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(cvAUC)
+LogRegPred <- predict(LogRegModel,dtTestFeatures)
+confusionMatrix(LogRegPred,reference =  dtTestLabels$Class) #dont swap the entries here as the plot
+#labels remain the same even if th entries are swapped. 
+
+PredForROC <- prediction(
+  as.numeric(LogRegPred), #wouldn't work without this : https://stackoverflow.com/questions/40783331/rocr-error-format-of-predictions-is-invalid
+  dtTestLabels$Class
+)
+
+PerfForROC <- performance(PredForROC,
+                          "tpr",
+                          "fpr")
+
+plot(PerfForROC,colorize = TRUE)
+#the two equations below are giving different values. 
+AUC(as.numeric(LogRegPred),dtTestLabels$Class)
+auc <- as.numeric(PerfForROC@y.values) #wow what is this @ operator. todo:
+```
+
+Understand what AUC really stands for. 

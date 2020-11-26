@@ -1,0 +1,148 @@
+---
+title: "Time Series Analysis"
+author: "Nirzaree"
+date: "23/10/2020"
+output: 
+  html_document:
+    fig_caption: yes
+    toc: yes
+    toc_collapsed: yes
+    toc_float: yes
+toc_depth: 3
+---
+
+## Theory
+```
+Stationary timeseries:
+1. Mean of series is constant and does not vary with time. 
+2. Variance is constant (homoscedasticity)
+3. Covariance is constant (seasonality effect is minimal)
+=> Should look like random white noise irrespective of observed time interval. 
+
+Stationary testing and converting a timeseries into a stationary series is crucial for any time series analysis. 
+
+Ref: 
+https://www.analyticsvidhya.com/blog/2015/12/complete-tutorial-time-series-modeling/
+http://r-statistics.co/Time-Series-Analysis-With-R.html
+https://boostedml.com/2020/05/visualizing-time-series-in-r.html
+http://people.cs.pitt.edu/~milos/courses/cs3750/lectures/class16.pdf  
+```
+## AirPassengers
+### Explore dataset
+```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+library(ggfortify)
+library(zoo)
+library(tseries)
+library(astsa)
+library(forecast)
+library(ggplot2)
+```
+
+
+```{r ExplorationofTimeseries,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+data("AirPassengers")
+class(AirPassengers)
+
+start(AirPassengers)
+end(AirPassengers)
+
+frequency(AirPassengers)
+summary(AirPassengers)
+
+plot(AirPassengers) + abline(reg = lm(AirPassengers~time(AirPassengers)))
+
+cycle(AirPassengers)
+
+plot(aggregate(AirPassengers,FUN = mean))
+
+boxplot(AirPassengers~cycle(AirPassengers))
+```
+
+**Quick Observations:**  
+
+* Trend: Increasing
+* Seasonality: Repeated patterns over the years.
+* Increasing variance: Swings are increasing over the years. 
+
+A time series has 4 components:
+
+1. Trend: Defines the long term behavior
+2. Cycles: Define mid term non repeated deviations from trend
+3. Seasonality: Defines periodic or repeated fluctuations
+4. Noise or remainder: Random fluctuations
+
+In many cases, trend and cycles are combined into one single trend-cycle or trend component.
+The decomposition of time series is either additive or multiplicative 
+
+$$ x_t = T_t + S_t + R_t $$ or 
+$$ x_t = T_t * S_t * R_t $$
+
+When to use which formulation: 
+If magnitude of seasonality depends on magnitude of raw values, then multiplicative else additive.
+In the given dataset, seasonality does depend on the raw values so multiplicative decomposition is more relevant.
+
+```{r DecomposedTS,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+decomposedAP <- decompose(AirPassengers,type = "multiplicative")
+autoplot(decomposedAP)
+
+additivedecomposedAP <- decompose(AirPassengers,type = "additive")
+autoplot(additivedecomposedAP)
+```
+
+**Observations:**
+
+* Trend component is almost linear
+* Each year starts with a low, with peak in July - August summer followed by a dip again.  
+* Random component is not completely random (although I dont see any real pattern, but the [reference](https://boostedml.com/2020/05/visualizing-time-series-in-r.html) says so) (todo: understand this better)
+
+### Stationarity test
+* **Augmented Dickey Fuller Test (ADF)**: Most common test to detect stationarity. Here, the null hypothesis is that the series is non-stationary. So if we find that the p-value in the ADF test < significance level (0.05), we reject the null hypothesis.  
+```{r stationaritytest,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+adf.test(AirPassengers)
+```
+**Observation:** Since the p-value is not less than 0.05, we conclude that the time-series is not stationary.
+
+* **KPSS** test: Test for trend stationarity.
+
+```{r trendstationarity,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+kpss.test(AirPassengers)
+```
+* **PP Test**:
+
+### Stationarize the series:
+
+* De-trend:
+
+
+* De-seasonalize: 
+```{r detrend,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
+plot(log(AirPassengers))
+
+plot(diff(log(AirPassengers)))
+
+adf.test(diff(log(AirPassengers)))
+```
+
+**Observations:** looks stationary but the p-value doesn't say so as much. 
+
+### Model
+
+### Predict:
+
+Ref and issues:
+
+1. http://people.cs.pitt.edu/~milos/courses/cs3750/lectures/class16.pdf theory only
+2. http://r-statistics.co/Time-Series-Analysis-With-R.html No model. no good transformation steps
+and explanations.
+3. https://www.kaggle.com/chirag19/time-series-analysis-with-python-beginner has everything, but 
+dont know how credible + python (not R)
+4. https://rpubs.com/neharaut05/TimeSeries_AirPassangerForecast just log(ts) for stationarizing.  Not solid.
+5. http://rstudio-pubs-static.s3.amazonaws.com/311446_08b00d63cc794e158b1f4763eb70d43a.html No transformation of the series at all
+6. https://www.analyticsvidhya.com/blog/2015/12/complete-tutorial-time-series-modeling/ too much of things without really basing the concepts. 3
+
+
+https://www.kaggle.com/chirag19/air-passengers/notebooks
+https://www.kaggle.com/chirag19/time-series-analysis-with-python-beginner
+
+https://rpubs.com/neharaut05/TimeSeries_AirPassangerForecast
+http://rstudio-pubs-static.s3.amazonaws.com/311446_08b00d63cc794e158b1f4763eb70d43a.html
