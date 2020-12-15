@@ -1,0 +1,93 @@
+---
+title: "Iris"
+author: "Nirzaree"
+date: "10/12/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+### 1. Setup
+
+```{r 1_setup, echo=TRUE}
+library(data.table)
+```
+
+### 2. Load Data
+```{r 2_loaddata,echo=TRUE}
+dtIris <- as.data.table(iris)
+```
+
+### 3. Explore Data
+```{r 3_exploredata,echo=TRUE,message=FALSE}
+library(caret)
+summary(dtIris)
+sapply(dtIris, class)
+summary(dtIris[,Species])
+featurePlot(dtIris[,1:4],dtIris[,Species],"density")
+```
+**Observations:**  
+1. Balanced Classes: Exactly same proportions of each of the 3 species of Iris.    
+2. Scale & Range of each feature column: Same unit in each column and not a lot of variation among the scales and ranges.    
+
+### 4. Data Preprocessing
+```{r 4_datapreprocessing,echo=TRUE}
+#split into train test sets. 
+set.seed(100)
+trainingindices <- sample(seq(1:nrow(dtIris)),0.8*nrow(dtIris))
+dtTrainIris <- dtIris[trainingindices,]
+dtTestIris <- dtIris[-trainingindices,]
+```
+
+### 5. Apply Models on training set
+
+```{r 5_Models,echo=TRUE}
+library(caret)
+fClassificationModels <- function(modelFormula,dtTrain,trainConfig,evalMetrics,modelList) {
+ AllModels <- lapply(modelList, function(x) {
+    SpecificModel <- train(modelFormula,
+                           data = dtTrain,
+                           method = x,
+                           trControl = trainConfig,
+                           metric = evalMetrics)
+    return(SpecificModel)
+  })
+  return(AllModels)
+}
+
+AllIrisModels <- fClassificationModels(modelFormula = Species~.,
+                                       dtTrain = dtTrainIris,
+                                       trainConfig = trainControl(method = "cv",number = 10),
+                                       evalMetrics = "Accuracy",
+                                       modelList = c("rpart","rf","nb","knn","lda","svmRadial"))
+```
+
+### 6. Find best model
+
+```{r 6_CompareModels,echo=TRUE}
+AllModelsSummary <- resamples(list(
+  DecisionTree = AllIrisModels[[1]],
+  RandomForest = AllIrisModels[[2]],
+  NaiveBayes = AllIrisModels[[3]],
+  knn = AllIrisModels[[4]],
+  LDA = AllIrisModels[[5]],
+  svmRadial = AllIrisModels[[6]]
+))
+
+dotplot(AllModelsSummary)
+summary(AllModelsSummary)
+```
+
+### 7. Predict using best model
+
+```{r 7_Predict,echo=TRUE}
+#LDA looks best
+predictIris <- predict(AllIrisModels[[5]],
+                           dtTestIris)
+
+confusionMatrix(predictIris,dtTestIris[,Species])
+```
+
+### Summary
+* What was not done in this project: Hyperparameter tuning, as even without it, the results are pretty good. 
+* Not a lot of preprocessing: as the features are on the same scale and ranges. 

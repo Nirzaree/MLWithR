@@ -57,7 +57,7 @@ Task: Classification of iris species from the sepal & petal length and width fea
 ```{r setup,echo = FALSE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 library(data.table)
 library(caret)
-source("/home/nirzareevadgama/Projects/MLWithR/fMultipleClassificationModels.R")
+source(paste0(Sys.getenv("Projects"),"/MLWithR/fMultipleClassificationModels.R"))
 
 ```
 
@@ -103,7 +103,7 @@ dtTest <- iris[-trainingIndex,]
 ```{r Classifiermodel_config,include=FALSE,echo = TRUE, message = FALSE, warning = FALSE,fig.width = 16, fig.height = 10}
 control <- trainControl(method = "cv",
                         number = 10)
-metric <- "accuracy"
+metric <- "Accuracy"
 ```
 
 ### 3. Build model: c) Build multiple models
@@ -171,7 +171,7 @@ which eliminates a lot of preprocessing.
 * Prediction accuracy on the remaining 20% data is ~97% (only 1 sample misclassified)  
 * Variable importance in each of the models is reflecting what appears from feature plots of the features. We looked at the variable importance on the linear classifier model. Petal Width & Length being important features followed by sepal length followed by sepal width.  
 
-We now look at another dataset: Titanic 
+We now look at another dataset: Titanict 
 
 ## Titanic
 

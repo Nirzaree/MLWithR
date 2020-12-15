@@ -1,0 +1,206 @@
+---
+title: "Titanic"
+author: "Nirzaree"
+date: "04/12/2020"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+### 1. Setup
+```{r 1_setup,message=FALSE,echo=TRUE}
+library(data.table)
+library(dplyr)
+knitr::opts_chunk$set(echo = TRUE)
+source(paste0(Sys.getenv("Projects"),"/MLWithR/fMultipleClassificationModels.R"))
+```
+
+### 2. Load data
+```{r 2_load_data}
+dtTrainTitanic <- data.table(read.csv(paste0(Sys.getenv("Data"),"/MLDatasets/titanic kaggle/train.csv")))
+dtTestTitanic <- data.table(read.csv(paste0(Sys.getenv("Data"),"/MLDatasets/titanic kaggle/test.csv")))
+
+```
+
+### 3. Explore data
+```{r 3_explore_data}
+dtTrainTitanic[,Survived := factor(Survived)]
+
+prop.table(table(dtTrainTitanic$Survived))
+
+summary(dtTrainTitanic[,Sex])
+
+tapply(dtTrainTitanic$Survived,dtTrainTitanic$Sex,summary)
+
+```
+
+### 4. Data Preprocessing
+```{r 4_data_processing}
+#1. Remove any duplicate rows, 
+dtTrainTitanic <- unique(dtTrainTitanic)
+dtTestTitanic <- unique(dtTestTitanic)
+
+```
+
+Make a function for all numeric data preprocessing:  
+1. Filters numeric data from the given data table input  
+2. For every column, replaces an NA instance with the median value of the column.  
+Function used: **set**  
+
+```{r PreprocessFuncNum}
+fPreProcessNumericData <- function(dtData) {
+  #all numeric columns
+  dtNumTrain = select_if(dtData,is.numeric)
+  dtNumTrain[,PassengerId := NULL]
+  
+  colSums(is.na(dtNumTrain))
+  
+  for (numcol in names(dtNumTrain)) {
+  set(x = dtNumTrain,which(is.na(dtNumTrain[[numcol]])),numcol,median(dtNumTrain[[numcol]],na.rm = T)) #todo: dtNumTrain[,numcol] not working. Why
+}
+
+  colSums(is.na(dtNumTrain))
+  
+  return(dtNumTrain)
+}
+```
+
+Make a function for all categorical data preprocessing:  
+1. Filters categorical (factor) data from the given data table input.  
+2. Removes features that we are going to ignore in the model & the target variable which is also a factor.   
+3. For every column, replaces an empty string instance "" with the mode value of the column.    To Note: Here the missing values cannot be captured by is.na check because 
+empty string is the level there and its not NA. However such an empty level will always be first among the other levels, so check for empty string level values and replace them with the mode  
+Keep in mind: Mode for a factor column  
+4. Post that, we one-hot encode the columns. Function used: **dummyVars** from caret. 
+Remember to put fullRank = TRUE. This will drop one of the values of the factor variable, which can be deduced from the other column values. For e.g. if Sex = Male or Female, having a column for both is not required. If both are kept, this will create issues for the model.  
+
+```{r PreprocessFuncCat}
+library(caret)
+fPreProcessCategoricData <- function(dtData) {
+  dtCatTrain <- select_if(dtData,is.factor)
+  dtCatTrain[,c("Name","Ticket","Cabin","Survived") := NULL]
+  
+  lapply(dtCatTrain,summary)
+  #2 empty values in embarked
+  #most frequent imputer 
+  for (catcol in names(dtCatTrain)) {
+    Mode = names(which.max(table(dtCatTrain[[catcol]])))
+    set(x = dtCatTrain,which((dtCatTrain[[catcol]]) == ""),catcol,Mode)
+    dtCatTrain[[catcol]] <- factor(dtCatTrain[[catcol]]) #required to remove the empty string factor..phew
+  }
+  
+  #no empty values in embarked 
+  lapply(dtCatTrain,summary)
+
+  dummyvarobject = dummyVars("~ .",dtCatTrain,fullRank = T)
+  dtCatTrain = predict(dummyvarobject,dtCatTrain)
+  
+  return(dtCatTrain)
+}
+```
+
+Run the training data through the categoric and numeric preprocess function. 
+Then combine the categoric and numeric data.
+```{r combine}
+#Combine the features
+dtNumTrain <- fPreProcessNumericData(dtTrainTitanic)
+dtCatTrain <- fPreProcessCategoricData(dtTrainTitanic)
+dtFinalTrain <- cbind(dtNumTrain,dtCatTrain,dtTrainTitanic[,"Survived"])
+```
+
+### 5. Apply Models on training set
+
+```{r 5_models}
+#svm
+# library(e1071)
+# 
+# tuned <- tune.svm(Survived ~ ., data = dtFinalTrain, gamma = "auto", tunecontrol = tune.control(cross=10))
+# summary(tuned)
+# print(tuned)
+# svmfit <- tuned$best.model
+
+control = trainControl(method = "cv",
+                        number = 10)
+metric = "Accuracy"
+
+fClassificationModels <- function(modelFormula,dtTrain,trainConfig,evalMetrics,modelList) {
+ AllModels <- lapply(modelList, function(x) {
+    set.seed(20)
+    SpecificModel <- train(modelFormula,
+                           data = dtTrain,
+                           method = x,
+                           trControl = trainConfig,
+                           metric = evalMetrics)
+    return(SpecificModel)
+  })
+  return(AllModels)
+}
+
+AllTitanicModels <- fClassificationModels(modelFormula = Survived ~ .,
+                                           dtTrain = dtFinalTrain,
+                                           trainConfig = control,
+                                           evalMetrics = metric,
+                                           modelList = c("rf","knn","rpart","svmRadial","lda")
+                                           ) #nb had issues
+```
+
+### 6. Find best model
+```{r 6_CompareModels}
+
+ClassificationResults <- resamples(list(
+RF = AllTitanicModels[[1]],
+knn = AllTitanicModels[[2]],
+dectree = AllTitanicModels[[3]],
+SVMRadial = AllTitanicModels[[4]],
+LDA = AllTitanicModels[[5]]
+))
+summary(ClassificationResults)
+dotplot(ClassificationResults)
+```
+
+### 7. Predict using best model
+a. PreProcess test data. Remember that the functions you have used should be doing imputations with training data mean/median/mode wherever it is the case. Not with test data summaries, as test data summaries would not be available in real world. 
+
+b. Combine the categorical and numeric test data columns.
+
+c. Predict using best model. 
+
+```{r 7_Predict}
+#preprocess test data
+dtNumTest <- fPreProcessNumericData(dtTestTitanic)
+dtCatTest <- fPreProcessCategoricData(dtTestTitanic)
+dtFinalTest <- cbind(dtNumTest,dtCatTest)
+
+y_pred = predict(AllTitanicModels[[4]],dtFinalTest)
+summary(y_pred)
+```
+
+### 8. Prediction Accuracy
+Submitted the predictions to Kaggle in the required format. 
+
+```{r 8_PredictionAccuracy}
+dtTestTitanic[,Survived := y_pred]
+dtOutput <- dtTestTitanic[,.(PassengerId,Survived)]
+fwrite(dtOutput,paste0(Sys.getenv("Data"),"/MLDatasets/titanic kaggle/result_svmradial_2020_12_15.csv"))
+```
+
+Prediction Accuracy generated from Kaggle: 77.27% 
+Not too below training accuracy so the model is doing a decent job.
+
+### Summary:
+1. Decent preprocessing steps. Impute missing values, one hot encode categorical values. 
+2. Make sure to have a function for preprocessing each of the classes of features, and to ensure that test data imputation is done with training data stats. 
+3. To keep in mind:
+  a.  **set** for imputation <!-- https://stackoverflow.com/questions/51379042/r-data-table-impute-missing-values-for-multiple-set-of-columns -->
+  New things to keep in mind. 
+  b. **mode** for categorical columns using table and usage of names
+  c. **resamples** for comparing CV results of different models.
+
+### ToDo:
+1. pclass numeric or cat feature? In cloudx tut, its a cat feature. I would argue for numeric as there is ranking associated in this feature. 
+2. Understand the impact of imputing the data vs not using missing value rows.
+3. Try without applying the one hot encoding.
+4. Look at other submissions on Kaggle to check if any feature engineering or tuning of models could be done. 
+
+### Resource: 
+https://trevorstephens.com/kaggle-titanic-tutorial/r-part-5-random-forests/
